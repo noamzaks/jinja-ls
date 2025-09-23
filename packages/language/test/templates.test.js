@@ -3607,7 +3607,7 @@ const TEST_PARSED = {
     { value: "|", type: "Text" },
   ],
   MACROS_3: [
-    { value: "{%", type: "OpenStatement" },
+    { value: "{%-", type: "OpenStatement" },
     { value: "macro", type: "Identifier" },
     { value: "dummy", type: "Identifier" },
     { value: "(", type: "OpenParen" },
@@ -3617,7 +3617,7 @@ const TEST_PARSED = {
     { value: "=", type: "Equals" },
     { value: "!", type: "StringLiteral" },
     { value: ")", type: "CloseParen" },
-    { value: "%}", type: "CloseStatement" },
+    { value: "-%}", type: "CloseStatement" },
     { value: "{{", type: "OpenExpression" },
     { value: "a", type: "Identifier" },
     { value: "}}", type: "CloseExpression" },
@@ -3630,47 +3630,47 @@ const TEST_PARSED = {
     { value: "{{", type: "OpenExpression" },
     { value: "b", type: "Identifier" },
     { value: "}}", type: "CloseExpression" },
-    { value: "{%", type: "OpenStatement" },
+    { value: "{%-", type: "OpenStatement" },
     { value: "endmacro", type: "Identifier" },
     { value: "%}", type: "CloseStatement" },
-    { value: "{%", type: "OpenStatement" },
+    { value: "{%-", type: "OpenStatement" },
     { value: "call", type: "Identifier" },
     { value: "dummy", type: "Identifier" },
     { value: "(", type: "OpenParen" },
     { value: "hello", type: "StringLiteral" },
     { value: ")", type: "CloseParen" },
-    { value: "%}", type: "CloseStatement" },
+    { value: "-%}", type: "CloseStatement" },
     { value: "name", type: "Text" },
-    { value: "{%", type: "OpenStatement" },
+    { value: "{%-", type: "OpenStatement" },
     { value: "endcall", type: "Identifier" },
-    { value: "%}", type: "CloseStatement" },
+    { value: "-%}", type: "CloseStatement" },
   ],
   MACROS_4: [
-    { value: "{%", type: "OpenStatement" },
+    { value: "{%-", type: "OpenStatement" },
     { value: "macro", type: "Identifier" },
     { value: "print_users", type: "Identifier" },
     { value: "(", type: "OpenParen" },
     { value: "users", type: "Identifier" },
     { value: ")", type: "CloseParen" },
-    { value: "%}", type: "CloseStatement" },
-    { value: "{%", type: "OpenStatement" },
+    { value: "-%}", type: "CloseStatement" },
+    { value: "{%-", type: "OpenStatement" },
     { value: "for", type: "Identifier" },
     { value: "user", type: "Identifier" },
     { value: "in", type: "Identifier" },
     { value: "users", type: "Identifier" },
-    { value: "%}", type: "CloseStatement" },
+    { value: "-%}", type: "CloseStatement" },
     { value: "{{", type: "OpenExpression" },
     { value: "caller", type: "Identifier" },
     { value: "(", type: "OpenParen" },
     { value: "user", type: "Identifier" },
     { value: ")", type: "CloseParen" },
     { value: "}}", type: "CloseExpression" },
-    { value: "{%", type: "OpenStatement" },
+    { value: "{%-", type: "OpenStatement" },
     { value: "endfor", type: "Identifier" },
-    { value: "%}", type: "CloseStatement" },
-    { value: "{%", type: "OpenStatement" },
+    { value: "-%}", type: "CloseStatement" },
+    { value: "{%-", type: "OpenStatement" },
     { value: "endmacro", type: "Identifier" },
-    { value: "%}", type: "CloseStatement" },
+    { value: "-%}", type: "CloseStatement" },
     { value: "{%", type: "OpenStatement" },
     { value: "call", type: "Identifier" },
     { value: "(", type: "OpenParen" },
@@ -4346,7 +4346,7 @@ describe("Templates", () => {
           EXPECTED_OUTPUTS[name] === undefined
         ) {
           console.warn(
-            `Skipping test case "${name}" due to missing context or expected output`,
+            `Skipping test case "${name}" due to missing context or expected output`
           )
           continue
         }
@@ -4478,7 +4478,7 @@ describe("Error checking", () => {
       env.set("non_iterable", 10)
 
       const tokens = tokenize(
-        "{% for item in non_iterable %}{{ item }}{% endfor %}",
+        "{% for item in non_iterable %}{{ item }}{% endfor %}"
       )
       const ast = parse(tokens)
       expect(() => interpreter.run(ast)).toThrowError()

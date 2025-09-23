@@ -42,10 +42,7 @@ export class Token {
    * @param {string} value The raw value as seen inside the source code.
    * @param {TokenType} type The type of token.
    */
-  constructor(
-    public value: string,
-    public type: TokenType,
-  ) {}
+  constructor(public value: string, public type: TokenType) {}
 }
 
 function isWord(char: string): boolean {
@@ -61,6 +58,14 @@ function isInteger(char: string): boolean {
  */
 const ORDERED_MAPPING_TABLE: [string, TokenType][] = [
   // Control sequences
+  ["{%-", TOKEN_TYPES.OpenStatement],
+  ["-%}", TOKEN_TYPES.CloseStatement],
+  ["{{-", TOKEN_TYPES.OpenExpression],
+  ["-}}", TOKEN_TYPES.CloseExpression],
+  ["{%+", TOKEN_TYPES.OpenStatement],
+  ["+%}", TOKEN_TYPES.CloseStatement],
+  ["{{+", TOKEN_TYPES.OpenExpression],
+  ["+}}", TOKEN_TYPES.CloseExpression],
   ["{%", TOKEN_TYPES.OpenStatement],
   ["%}", TOKEN_TYPES.CloseStatement],
   ["{{", TOKEN_TYPES.OpenExpression],
@@ -111,70 +116,31 @@ export interface PreprocessOptions {
   lstrip_blocks?: boolean
 }
 
-function preprocess(template: string, options: PreprocessOptions = {}): string {
-  // According to https://jinja.palletsprojects.com/en/3.0.x/templates/#whitespace-control
-
-  // In the default configuration:
-  //  - a single trailing newline is stripped if present
-  //  - other whitespace (spaces, tabs, newlines etc.) is returned unchanged
-  if (template.endsWith("\n")) {
-    template = template.slice(0, -1)
-  }
-
-  if (options.lstrip_blocks) {
-    // The lstrip_blocks option can also be set to strip tabs and spaces from the
-    // beginning of a line to the start of a block. (Nothing will be stripped if
-    // there are other characters before the start of the block.)
-    template = template.replace(/^[ \t]*({[#%-])/gm, "$1")
-  }
-
-  if (options.trim_blocks) {
-    // If an application configures Jinja to trim_blocks, the first newline after
-    // a template tag is removed automatically (like in PHP).
-    template = template.replace(/([#%-]})\n/g, "$1")
-  }
-
-  return (
-    template
-      .replace(/-%}\s*/g, "%}")
-      .replace(/\s*{%-/g, "{%")
-      .replace(/-}}\s*/g, "}}")
-      .replace(/\s*{{-/g, "{{")
-      .replace(/-#}\s*/g, "#}")
-      .replace(/\s*{#-/g, "{#")
-
-      // Handle the custom transformers-specific `generation` tag.
-      // See https://github.com/huggingface/transformers/pull/30650 for more information.
-      .replace(/{%\s*(end)?generation\s*%}/gs, "")
-  )
-}
-
 /**
  * Generate a list of tokens from a source string.
  */
 export function tokenize(
   source: string,
-  options: PreprocessOptions = {},
+  options: PreprocessOptions = {}
 ): Token[] {
   const tokens: Token[] = []
-  const src: string = preprocess(source, options)
 
   let cursorPosition = 0
   let curlyBracketDepth = 0
 
   const consumeWhile = (predicate: (char: string) => boolean): string => {
     let str = ""
-    while (predicate(src[cursorPosition])) {
+    while (predicate(source[cursorPosition])) {
       // Check for escaped characters
-      if (src[cursorPosition] === "\\") {
+      if (source[cursorPosition] === "\\") {
         // Consume the backslash
         ++cursorPosition
         // Check for end of input
-        if (cursorPosition >= src.length)
+        if (cursorPosition >= source.length)
           throw new SyntaxError("Unexpected end of input")
 
         // Add the escaped character
-        const escaped = src[cursorPosition++]
+        const escaped = source[cursorPosition++]
         const unescaped = ESCAPE_CHARACTERS.get(escaped)
         if (unescaped === undefined) {
           throw new SyntaxError(`Unexpected escaped character: ${escaped}`)
@@ -183,15 +149,15 @@ export function tokenize(
         continue
       }
 
-      str += src[cursorPosition++]
-      if (cursorPosition >= src.length)
+      str += source[cursorPosition++]
+      if (cursorPosition >= source.length)
         throw new SyntaxError("Unexpected end of input")
     }
     return str
   }
 
   // Build each token until end of input
-  main: while (cursorPosition < src.length) {
+  main: while (cursorPosition < source.length) {
     // First, consume all text that is outside of a Jinja statement or expression
     const lastTokenType = tokens.at(-1)?.type
     if (
@@ -202,40 +168,73 @@ export function tokenize(
     ) {
       let text = ""
       while (
-        cursorPosition < src.length &&
+        cursorPosition < source.length &&
         // Keep going until we hit the next Jinja statement or expression
         !(
-          src[cursorPosition] === "{" &&
-          (src[cursorPosition + 1] === "%" ||
-            src[cursorPosition + 1] === "{" ||
-            src[cursorPosition + 1] === "#")
+          source[cursorPosition] === "{" &&
+          (source[cursorPosition + 1] === "%" ||
+            source[cursorPosition + 1] === "{" ||
+            source[cursorPosition + 1] === "#")
         )
       ) {
         // Consume text
-        text += src[cursorPosition++]
+        text += source[cursorPosition++]
       }
 
       // There is some text to add
       if (text.length > 0) {
+        // Handle whitespace control
+        if (tokens.at(-1)?.value?.startsWith("-")) {
+          text = text.trimStart()
+        }
+        if (source[cursorPosition + 2] === "-") {
+          text = text.trimEnd()
+        }
+        if (
+          cursorPosition === source.length &&
+          text[text.length - 1] === "\n"
+        ) {
+          text = text.slice(0, -1)
+        }
+        if (
+          options.lstrip_blocks &&
+          (source[cursorPosition + 1] === "%" ||
+            source[cursorPosition + 1] === "#")
+        ) {
+          const lastLineIndex = text.lastIndexOf("\n")
+          if (/^[ \t]*$/.test(text.slice(lastLineIndex + 1))) {
+            text = text.slice(0, lastLineIndex + 1)
+          }
+        }
+
         tokens.push(new Token(text, TOKEN_TYPES.Text))
         continue
       }
     }
 
     // Possibly consume a comment
-    if (src[cursorPosition] === "{" && src[cursorPosition + 1] === "#") {
+    if (source[cursorPosition] === "{" && source[cursorPosition + 1] === "#") {
       cursorPosition += 2 // Skip the opening {#
 
       let comment = ""
-      while (src[cursorPosition] !== "#" || src[cursorPosition + 1] !== "}") {
+      while (
+        source[cursorPosition] !== "#" ||
+        source[cursorPosition + 1] !== "}"
+      ) {
         // Check for end of input
-        if (cursorPosition + 2 >= src.length) {
+        if (cursorPosition + 2 >= source.length) {
           throw new SyntaxError("Missing end of comment tag")
         }
-        comment += src[cursorPosition++]
+        comment += source[cursorPosition++]
       }
       tokens.push(new Token(comment, TOKEN_TYPES.Comment))
       cursorPosition += 2 // Skip the closing #}
+
+      // Handle whitespace control
+      if (options.trim_blocks && source[cursorPosition] === "\n") {
+        ++cursorPosition
+      }
+
       continue
     }
 
@@ -243,7 +242,7 @@ export function tokenize(
     consumeWhile((char) => /\s/.test(char))
 
     // Handle multi-character tokens
-    const char = src[cursorPosition]
+    const char = source[cursorPosition]
 
     // Check for unary operators
     if (char === "-" || char === "+") {
@@ -274,8 +273,8 @@ export function tokenize(
               `${char}${num}`,
               num.length > 0
                 ? TOKEN_TYPES.NumericLiteral
-                : TOKEN_TYPES.UnaryOperator,
-            ),
+                : TOKEN_TYPES.UnaryOperator
+            )
           )
           continue
         }
@@ -288,7 +287,7 @@ export function tokenize(
       if (seq === "}}" && curlyBracketDepth > 0) {
         continue
       }
-      const slice = src.slice(cursorPosition, cursorPosition + seq.length)
+      const slice = source.slice(cursorPosition, cursorPosition + seq.length)
       if (slice === seq) {
         tokens.push(new Token(seq, type))
 
@@ -301,6 +300,15 @@ export function tokenize(
           --curlyBracketDepth
         }
         cursorPosition += seq.length
+
+        // Handle whitespace control
+        if (
+          type === TOKEN_TYPES.CloseStatement &&
+          options.trim_blocks &&
+          source[cursorPosition] === "\n"
+        ) {
+          ++cursorPosition
+        }
         continue main
       }
     }
@@ -317,7 +325,10 @@ export function tokenize(
       // Consume integer part
       let num = consumeWhile(isInteger)
       // Possibly, consume fractional part
-      if (src[cursorPosition] === "." && isInteger(src[cursorPosition + 1])) {
+      if (
+        source[cursorPosition] === "." &&
+        isInteger(source[cursorPosition + 1])
+      ) {
         ++cursorPosition // consume '.'
         const frac = consumeWhile(isInteger)
         num = `${num}.${frac}`

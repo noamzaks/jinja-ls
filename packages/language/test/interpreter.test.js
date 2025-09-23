@@ -1,8 +1,8 @@
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
 
-import { Environment, Interpreter } from "../src/runtime"
 import { tokenize } from "../src/lexer"
 import { parse } from "../src/parser"
+import { Environment, Interpreter } from "../src/runtime"
 
 describe("Test interpreter options", () => {
   // https://jinja.palletsprojects.com/en/3.0.x/templates/#whitespace-control
