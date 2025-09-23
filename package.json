@@ -1,0 +1,6 @@
+{
+    "name": "jinja-lsp",
+    "workspaces": [
+        "packages/*"
+    ]
+}
