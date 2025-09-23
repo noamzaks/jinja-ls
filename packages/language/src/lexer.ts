@@ -41,8 +41,15 @@ export class Token {
    * Constructs a new Token.
    * @param {string} value The raw value as seen inside the source code.
    * @param {TokenType} type The type of token.
+   * @param {number} start The start offset of the token.
+   * @param {number} end The end offset of the token.
    */
-  constructor(public value: string, public type: TokenType) {}
+  constructor(
+    public value: string,
+    public type: TokenType,
+    public start: number,
+    public end: number
+  ) {}
 }
 
 function isWord(char: string): boolean {
@@ -126,7 +133,23 @@ export function tokenize(
   const tokens: Token[] = []
 
   let cursorPosition = 0
+  let previousCursorPosition = 0
   let curlyBracketDepth = 0
+
+  const createToken = (value: string, type: TokenType) => {
+    const result = new Token(
+      value,
+      type,
+      previousCursorPosition,
+      cursorPosition
+    )
+    previousCursorPosition = cursorPosition
+    const match = /^[ \t]+/.exec(source.slice(previousCursorPosition))
+    if (match) {
+      previousCursorPosition += match[0].length
+    }
+    return result
+  }
 
   const consumeWhile = (predicate: (char: string) => boolean): string => {
     let str = ""
@@ -207,7 +230,7 @@ export function tokenize(
           }
         }
 
-        tokens.push(new Token(text, TOKEN_TYPES.Text))
+        tokens.push(createToken(text, TOKEN_TYPES.Text))
         continue
       }
     }
@@ -227,8 +250,8 @@ export function tokenize(
         }
         comment += source[cursorPosition++]
       }
-      tokens.push(new Token(comment, TOKEN_TYPES.Comment))
       cursorPosition += 2 // Skip the closing #}
+      tokens.push(createToken(comment, TOKEN_TYPES.Comment))
 
       // Handle whitespace control
       if (options.trim_blocks && source[cursorPosition] === "\n") {
@@ -269,7 +292,7 @@ export function tokenize(
           // Check for numbers following the unary operator
           const num = consumeWhile(isInteger)
           tokens.push(
-            new Token(
+            createToken(
               `${char}${num}`,
               num.length > 0
                 ? TOKEN_TYPES.NumericLiteral
@@ -289,8 +312,6 @@ export function tokenize(
       }
       const slice = source.slice(cursorPosition, cursorPosition + seq.length)
       if (slice === seq) {
-        tokens.push(new Token(seq, type))
-
         // possibly adjust the curly bracket depth
         if (type === TOKEN_TYPES.OpenExpression) {
           curlyBracketDepth = 0
@@ -300,6 +321,7 @@ export function tokenize(
           --curlyBracketDepth
         }
         cursorPosition += seq.length
+        tokens.push(createToken(seq, type))
 
         // Handle whitespace control
         if (
@@ -316,8 +338,8 @@ export function tokenize(
     if (char === "'" || char === '"') {
       ++cursorPosition // Skip the opening quote
       const str = consumeWhile((c) => c !== char)
-      tokens.push(new Token(str, TOKEN_TYPES.StringLiteral))
       ++cursorPosition // Skip the closing quote
+      tokens.push(createToken(str, TOKEN_TYPES.StringLiteral))
       continue
     }
 
@@ -333,13 +355,13 @@ export function tokenize(
         const frac = consumeWhile(isInteger)
         num = `${num}.${frac}`
       }
-      tokens.push(new Token(num, TOKEN_TYPES.NumericLiteral))
+      tokens.push(createToken(num, TOKEN_TYPES.NumericLiteral))
       continue
     }
     if (isWord(char)) {
       // consume any word characters and always classify as Identifier
       const word = consumeWhile(isWord)
-      tokens.push(new Token(word, TOKEN_TYPES.Identifier))
+      tokens.push(createToken(word, TOKEN_TYPES.Identifier))
       continue
     }
 

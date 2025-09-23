@@ -97,14 +97,14 @@ export function parse(tokens: Token[]): Program {
       names.every(
         (name, i) =>
           tokens[current + i].type === "Identifier" &&
-          name === tokens[current + i].value,
+          name === tokens[current + i].value
       )
     )
   }
 
   function parseText(): StringLiteral {
     return new StringLiteral(
-      expect(TOKEN_TYPES.Text, "Expected text token").value,
+      expect(TOKEN_TYPES.Text, "Expected text token").value
     )
   }
 
@@ -197,7 +197,7 @@ export function parse(tokens: Token[]): Program {
         expect(TOKEN_TYPES.CloseStatement, "Expected '%}'")
         result = new FilterStatement(
           filterNode as Identifier | CallExpression,
-          filterBody,
+          filterBody
         )
         break
       }
@@ -317,7 +317,7 @@ export function parse(tokens: Token[]): Program {
       )
     ) {
       throw new SyntaxError(
-        `Expected identifier/tuple for the loop variable, got ${loopVariable.type} instead`,
+        `Expected identifier/tuple for the loop variable, got ${loopVariable.type} instead`
       )
     }
 
@@ -422,7 +422,12 @@ export function parse(tokens: Token[]): Program {
     while (true) {
       let operator: Token
       if (isIdentifier("not", "in")) {
-        operator = new Token("not in", TOKEN_TYPES.Identifier)
+        operator = new Token(
+          "not in",
+          TOKEN_TYPES.Identifier,
+          tokens[current].start,
+          tokens[current + 1].end
+        )
         current += 2
       } else if (isIdentifier("in")) {
         operator = tokens[current++]
@@ -476,14 +481,14 @@ export function parse(tokens: Token[]): Program {
     // add (x + 5, foo())
     expect(
       TOKEN_TYPES.OpenParen,
-      "Expected opening parenthesis for arguments list",
+      "Expected opening parenthesis for arguments list"
     )
 
     const args = parseArgumentsList()
 
     expect(
       TOKEN_TYPES.CloseParen,
-      "Expected closing parenthesis for arguments list",
+      "Expected closing parenthesis for arguments list"
     )
     return args
   }
@@ -514,7 +519,7 @@ export function parse(tokens: Token[]): Program {
           const value = parseExpression()
           argument = new KeywordArgumentExpression(
             argument as Identifier,
-            value,
+            value
           )
         }
       }
@@ -550,7 +555,7 @@ export function parse(tokens: Token[]): Program {
     if (slices.length === 0) {
       // []
       throw new SyntaxError(
-        `Expected at least one argument for member/slice expression`,
+        `Expected at least one argument for member/slice expression`
       )
     }
 
@@ -575,7 +580,7 @@ export function parse(tokens: Token[]): Program {
         property = parseMemberExpressionArgumentsList()
         expect(
           TOKEN_TYPES.CloseSquareBracket,
-          "Expected closing square bracket",
+          "Expected closing square bracket"
         )
       } else {
         // non-computed (i.e., dot notation: obj.expr)
@@ -639,7 +644,7 @@ export function parse(tokens: Token[]): Program {
       }
       operand = new FilterExpression(
         operand,
-        filter as Identifier | CallExpression,
+        filter as Identifier | CallExpression
       )
     }
     return operand
@@ -668,7 +673,7 @@ export function parse(tokens: Token[]): Program {
         const expression = parseExpressionSequence()
         expect(
           TOKEN_TYPES.CloseParen,
-          "Expected closing parenthesis, got ${tokens[current].type} instead.",
+          "Expected closing parenthesis, got ${tokens[current].type} instead."
         )
         return expression
       }
@@ -691,7 +696,7 @@ export function parse(tokens: Token[]): Program {
           const key = parseExpression()
           expect(
             TOKEN_TYPES.Colon,
-            "Expected colon between key and value in object literal",
+            "Expected colon between key and value in object literal"
           )
           const value = parseExpression()
           values.set(key, value)
