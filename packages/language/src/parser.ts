@@ -7,6 +7,7 @@ import {
   CallStatement,
   Comment,
   Continue,
+  createTokenNode,
   FilterExpression,
   FilterStatement,
   FloatLiteral,
@@ -26,6 +27,7 @@ import {
   StringLiteral,
   Ternary,
   TestExpression,
+  TokenNode,
   TupleLiteral,
   UnaryExpression,
 } from "./ast"
@@ -125,7 +127,7 @@ export function parse(tokens: Token[]): Program {
 
   function parseText(): StringLiteral {
     const token = expect(TOKEN_TYPES.Text, "Expected text token")
-    return new StringLiteral(token.value, [token])
+    return new StringLiteral(token.value, [new TokenNode(token)])
   }
 
   function parseJinjaStatement(): Statement {
@@ -156,42 +158,57 @@ export function parse(tokens: Token[]): Program {
         ++current
         result = parseIfStatement()
         // expect {% endif %}
-        result.closerOpenToken = expect(
-          TOKEN_TYPES.OpenStatement,
-          "Expected {% token"
+        result.addChild(
+          new TokenNode(expect(TOKEN_TYPES.OpenStatement, "Expected {% token")),
+          "closerOpenToken"
         )
-        result.closerIdentifier = expectIdentifier("endif")
-        result.closerCloseToken = expect(
-          TOKEN_TYPES.CloseStatement,
-          "Expected %} token"
+        result.addChild(
+          new TokenNode(expectIdentifier("endif")),
+          "closerIdentifier"
+        )
+        result.addChild(
+          new TokenNode(
+            expect(TOKEN_TYPES.CloseStatement, "Expected %} token")
+          ),
+          "closerCloseToken"
         )
         break
       case "macro":
         ++current
         result = parseMacroStatement()
         // expect {% endmacro %}
-        result.closerOpenToken = expect(
-          TOKEN_TYPES.OpenStatement,
-          "Expected {% token"
+        result.addChild(
+          new TokenNode(expect(TOKEN_TYPES.OpenStatement, "Expected {% token")),
+          "closerOpenToken"
         )
-        result.closerIdentifier = expectIdentifier("endmacro")
-        result.closerCloseToken = expect(
-          TOKEN_TYPES.CloseStatement,
-          "Expected %} token"
+        result.addChild(
+          new TokenNode(expectIdentifier("endmacro")),
+          "closerIdentifier"
+        )
+        result.addChild(
+          new TokenNode(
+            expect(TOKEN_TYPES.CloseStatement, "Expected %} token")
+          ),
+          "closerCloseToken"
         )
         break
       case "for":
         ++current
         result = parseForStatement()
         // expect {% endfor %}
-        result.closerOpenToken = expect(
-          TOKEN_TYPES.OpenStatement,
-          "Expected {% token"
+        result.addChild(
+          new TokenNode(expect(TOKEN_TYPES.OpenStatement, "Expected {% token")),
+          "closerOpenToken"
         )
-        result.closerIdentifier = expectIdentifier("endfor")
-        result.closerCloseToken = expect(
-          TOKEN_TYPES.CloseStatement,
-          "Expected %} token"
+        result.addChild(
+          new TokenNode(expectIdentifier("endfor")),
+          "closerIdentifier"
+        )
+        result.addChild(
+          new TokenNode(
+            expect(TOKEN_TYPES.CloseStatement, "Expected %} token")
+          ),
+          "closerCloseToken"
         )
         break
       case "call": {
@@ -223,24 +240,32 @@ export function parse(tokens: Token[]): Program {
         const callExpr = new CallExpression(
           callee,
           callArgs,
-          callOpenParen,
-          callCloseParen
+          new TokenNode(callOpenParen),
+          new TokenNode(callCloseParen)
         )
         result = new CallStatement(
           callExpr,
           callerArgs?.[1] ?? null,
           body,
-          callerArgs?.[0],
-          callerArgs?.[2]
+          createTokenNode(callerArgs?.[0]),
+          createTokenNode(callerArgs?.[2])
         )
-        result.closerOpenToken = expect(
-          TOKEN_TYPES.OpenStatement,
-          "Expected '{%'"
+        result.addChild(
+          new TokenNode(expect(TOKEN_TYPES.OpenStatement, "Expected '{%'")),
+          "closerOpenToken"
         )
-        result.closerIdentifier = expectIdentifier("endcall")
-        result.closerCloseToken = expect(
-          TOKEN_TYPES.CloseStatement,
-          "Expected closing statement token"
+        result.addChild(
+          new TokenNode(expectIdentifier("endcall")),
+          "closerIdentifier"
+        )
+        result.addChild(
+          new TokenNode(
+            expect(
+              TOKEN_TYPES.CloseStatement,
+              "Expected closing statement token"
+            )
+          ),
+          "closerCloseToken"
         )
         break
       }
@@ -278,14 +303,18 @@ export function parse(tokens: Token[]): Program {
           filterNode as Identifier | CallExpression,
           filterBody
         )
-        result.closerOpenToken = expect(
-          TOKEN_TYPES.OpenStatement,
-          "Expected '{%'"
+
+        result.addChild(
+          new TokenNode(expect(TOKEN_TYPES.OpenStatement, "Expected '{%'")),
+          "closerOpenToken"
         )
-        result.closerIdentifier = expectIdentifier("endfilter")
-        result.closerCloseToken = expect(
-          TOKEN_TYPES.CloseStatement,
-          "Expected '%}'"
+        result.addChild(
+          new TokenNode(expectIdentifier("endfilter")),
+          "closerIdentifier"
+        )
+        result.addChild(
+          new TokenNode(expect(TOKEN_TYPES.CloseStatement, "Expected '%}'")),
+          "closerCloseToken"
         )
         break
       }
@@ -296,10 +325,10 @@ export function parse(tokens: Token[]): Program {
           tokens[current].end
         )
     }
-    result.openToken = openToken
-    result.identifier = identifier
+    result.addChild(new TokenNode(openToken), "openToken")
+    result.addChild(new TokenNode(identifier), "identifier")
     if (closeToken) {
-      result.closeToken = closeToken
+      result.addChild(new TokenNode(closeToken), "closeToken")
     }
 
     return result
@@ -313,11 +342,13 @@ export function parse(tokens: Token[]): Program {
     )
 
     const result = parseExpression()
-    result.openToken = openToken
+    result.addChild(new TokenNode(openToken), "openToken")
 
-    result.closeToken = expect(
-      TOKEN_TYPES.CloseExpression,
-      "Expected closing expression token"
+    result.addChild(
+      new TokenNode(
+        expect(TOKEN_TYPES.CloseExpression, "Expected closing expression token")
+      ),
+      "closeToken"
     )
 
     return result
@@ -345,19 +376,28 @@ export function parse(tokens: Token[]): Program {
       closerOpenToken = expect(TOKEN_TYPES.OpenStatement, "Expected {% token")
       closerIdentifier = expectIdentifier("endset")
     }
-    const result = new SetStatement(left, value, body, equalsToken)
+    const result = new SetStatement(
+      left,
+      value,
+      body,
+      createTokenNode(equalsToken)
+    )
     if (closeToken) {
-      result.closeToken = closeToken
-      result.closerOpenToken = closerOpenToken
-      result.closerIdentifier = closerIdentifier
-      result.closerCloseToken = expect(
-        TOKEN_TYPES.CloseStatement,
-        "Expected closing statement token"
+      result.addChild(new TokenNode(closeToken), "closeToken")
+      result.addChild(new TokenNode(closerOpenToken!), "closerOpenToken")
+      result.addChild(new TokenNode(closerIdentifier!), "closerIdentifier")
+      result.addChild(
+        new TokenNode(
+          expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
+        ),
+        "closerCloseToken"
       )
     } else {
-      result.closeToken = expect(
-        TOKEN_TYPES.CloseStatement,
-        "Expected closing statement token"
+      result.addChild(
+        new TokenNode(
+          expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
+        ),
+        "closeToken"
       )
     }
     return result
@@ -366,9 +406,11 @@ export function parse(tokens: Token[]): Program {
   function parseIfStatement(): If {
     const test = parseExpression()
 
-    test.closeToken = expect(
-      TOKEN_TYPES.CloseStatement,
-      "Expected closing statement token"
+    test.addChild(
+      new TokenNode(
+        expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
+      ),
+      "closeToken"
     )
 
     const body: Statement[] = []
@@ -389,8 +431,8 @@ export function parse(tokens: Token[]): Program {
       const elifIdentifier = tokens[current]
       ++current // consume 'elif'
       const result = parseIfStatement() // nested If
-      result.openToken = elifOpenToken
-      result.identifier = elifIdentifier
+      result.addChild(new TokenNode(elifOpenToken), "openToken")
+      result.addChild(new TokenNode(elifIdentifier), "identifier")
       alternate.push(result)
     }
     // handle {% else %}
@@ -414,9 +456,9 @@ export function parse(tokens: Token[]): Program {
       test,
       body,
       alternate,
-      elseOpenToken,
-      elseIdentifier,
-      elseCloseToken
+      createTokenNode(elseOpenToken),
+      createTokenNode(elseIdentifier),
+      createTokenNode(elseCloseToken)
     )
   }
 
@@ -448,10 +490,10 @@ export function parse(tokens: Token[]): Program {
       name as Identifier,
       args,
       body,
-      argsOpenParen,
-      argsCloseParen
+      createTokenNode(argsOpenParen),
+      createTokenNode(argsCloseParen)
     )
-    result.closeToken = closeToken
+    result.addChild(new TokenNode(closeToken), "closeToken")
     return result
   }
 
@@ -533,12 +575,12 @@ export function parse(tokens: Token[]): Program {
       iterable,
       body,
       alternative,
-      inToken,
-      elseOpenToken,
-      elseIdentifier,
-      elseCloseToken
+      new TokenNode(inToken),
+      createTokenNode(elseOpenToken),
+      createTokenNode(elseIdentifier),
+      createTokenNode(elseCloseToken)
     )
-    result.closeToken = closeToken
+    result.addChild(new TokenNode(closeToken), "closeToken")
     return result
   }
 
@@ -558,10 +600,16 @@ export function parse(tokens: Token[]): Program {
         // Ternary expression with else
         const elseToken = tokens[current++] // consume 'else'
         const falseExpr = parseIfExpression() // recurse to support chained ternaries
-        return new Ternary(test, a, falseExpr, ifToken, elseToken)
+        return new Ternary(
+          test,
+          a,
+          falseExpr,
+          new TokenNode(ifToken),
+          new TokenNode(elseToken)
+        )
       } else {
         // Select expression on iterable
-        return new SelectExpression(a, test, ifToken)
+        return new SelectExpression(a, test, new TokenNode(ifToken))
       }
     }
     return a
@@ -573,7 +621,7 @@ export function parse(tokens: Token[]): Program {
       const operator = tokens[current]
       ++current
       const right = parseLogicalAndExpression()
-      left = new BinaryExpression(operator, left, right)
+      left = new BinaryExpression(new TokenNode(operator), left, right)
     }
     return left
   }
@@ -584,7 +632,7 @@ export function parse(tokens: Token[]): Program {
       const operator = tokens[current]
       ++current
       const right = parseLogicalNegationExpression()
-      left = new BinaryExpression(operator, left, right)
+      left = new BinaryExpression(new TokenNode(operator), left, right)
     }
     return left
   }
@@ -598,7 +646,7 @@ export function parse(tokens: Token[]): Program {
       const operator = tokens[current]
       ++current
       const arg = parseLogicalNegationExpression() // not test.x === not (test.x)
-      right = new UnaryExpression(operator, arg)
+      right = new UnaryExpression(new TokenNode(operator), arg)
     }
 
     return right ?? parseComparisonExpression()
@@ -626,7 +674,7 @@ export function parse(tokens: Token[]): Program {
         break
       }
       const right = parseAdditiveExpression()
-      left = new BinaryExpression(operator, left, right)
+      left = new BinaryExpression(new TokenNode(operator), left, right)
     }
     return left
   }
@@ -636,7 +684,7 @@ export function parse(tokens: Token[]): Program {
       const operator = tokens[current]
       ++current
       const right = parseMultiplicativeExpression()
-      left = new BinaryExpression(operator, left, right)
+      left = new BinaryExpression(new TokenNode(operator), left, right)
     }
     return left
   }
@@ -658,8 +706,8 @@ export function parse(tokens: Token[]): Program {
     let expression: Statement = new CallExpression(
       callee,
       args,
-      openToken,
-      closeToken
+      new TokenNode(openToken),
+      new TokenNode(closeToken)
     )
 
     expression = parseMemberExpression(expression) // foo.x().y
@@ -701,7 +749,7 @@ export function parse(tokens: Token[]): Program {
       ) {
         const operatorToken = tokens[current++]
         const expr = parseExpression()
-        argument = new SpreadExpression(expr, operatorToken)
+        argument = new SpreadExpression(expr, new TokenNode(operatorToken))
       } else {
         const argumentStart = current
         argument = parseExpression()
@@ -720,7 +768,7 @@ export function parse(tokens: Token[]): Program {
           argument = new KeywordArgumentExpression(
             argument as Identifier,
             value,
-            equalsToken
+            new TokenNode(equalsToken)
           )
         }
       }
@@ -816,7 +864,7 @@ export function parse(tokens: Token[]): Program {
     while (is(TOKEN_TYPES.MultiplicativeBinaryOperator)) {
       const operator = tokens[current++]
       const right = parseTestExpression()
-      left = new BinaryExpression(operator, left, right)
+      left = new BinaryExpression(new TokenNode(operator), left, right)
     }
     return left
   }
@@ -843,7 +891,13 @@ export function parse(tokens: Token[]): Program {
         )
       }
       // TODO: Add support for non-identifier tests
-      operand = new TestExpression(operand, negate, filter, isToken, notToken)
+      operand = new TestExpression(
+        operand,
+        negate,
+        filter,
+        new TokenNode(isToken),
+        createTokenNode(notToken)
+      )
     }
     return operand
   }
@@ -869,7 +923,7 @@ export function parse(tokens: Token[]): Program {
       operand = new FilterExpression(
         operand,
         filter as Identifier | CallExpression,
-        pipeToken
+        new TokenNode(pipeToken)
       )
     }
     return operand
@@ -882,20 +936,20 @@ export function parse(tokens: Token[]): Program {
       case TOKEN_TYPES.NumericLiteral: {
         const num = token.value
         return num.includes(".")
-          ? new FloatLiteral(Number(num), token)
-          : new IntegerLiteral(Number(num), token)
+          ? new FloatLiteral(Number(num), new TokenNode(token))
+          : new IntegerLiteral(Number(num), new TokenNode(token))
       }
       case TOKEN_TYPES.StringLiteral: {
-        const currentTokens = [token]
+        const currentTokens = [new TokenNode(token)]
         let value = token.value
         while (is(TOKEN_TYPES.StringLiteral)) {
-          currentTokens.push(tokens[current])
+          currentTokens.push(new TokenNode(tokens[current]))
           value += tokens[current++].value
         }
         return new StringLiteral(value, currentTokens)
       }
       case TOKEN_TYPES.Identifier:
-        return new Identifier(token.value, token)
+        return new Identifier(token.value, new TokenNode(token))
       case TOKEN_TYPES.OpenParen: {
         const expression = parseExpressionSequence()
         expect(
@@ -915,7 +969,11 @@ export function parse(tokens: Token[]): Program {
         }
         const closeToken = tokens[current++] // consume closing square bracket
 
-        return new ArrayLiteral(values, token, closeToken)
+        return new ArrayLiteral(
+          values,
+          new TokenNode(token),
+          new TokenNode(closeToken)
+        )
       }
       case TOKEN_TYPES.OpenCurlyBracket: {
         const values = new Map()
@@ -934,7 +992,11 @@ export function parse(tokens: Token[]): Program {
         }
         const closeToken = tokens[current++] // consume closing curly bracket
 
-        return new ObjectLiteral(values, token, closeToken)
+        return new ObjectLiteral(
+          values,
+          new TokenNode(token),
+          new TokenNode(closeToken)
+        )
       }
       default:
         throw new ParserError(
@@ -946,7 +1008,9 @@ export function parse(tokens: Token[]): Program {
   }
 
   while (current < tokens.length) {
-    program.body.push(parseAny())
+    const node = parseAny()
+    program.body.push(node)
+    program.addChild(node)
   }
 
   return program
