@@ -1,20 +1,22 @@
 {
   "compilerOptions": {
-    "allowSyntheticDefaultImports": true,
-    "lib": ["ES2022", "DOM"],
-    "module": "ESNext",
-    "moduleResolution": "node",
-    "target": "ESNext",
-    "forceConsistentCasingInFileNames": true,
+    "module": "commonjs",
+    "target": "ES2024",
+    "lib": [
+      "ES2024"
+    ],
+    "outDir": "out",
+    "rootDir": "src",
+    "sourceMap": true,
     "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "skipLibCheck": true,
-    "noImplicitOverride": true,
-    "outDir": "./dist",
     "declaration": true,
     "declarationMap": true
   },
-  "include": ["src", "index.ts"],
-  "exclude": ["dist"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules",
+    ".vscode-test"
+  ]
 }

@@ -11,6 +11,8 @@
  * @module index
  */
 import type { Program } from "./ast"
+import * as ast from "./ast"
+import { LexerError } from "./errors"
 import { format } from "./format"
 import { tokenize } from "./lexer"
 import { parse } from "./parser"
@@ -54,4 +56,4 @@ export class Template {
   }
 }
 
-export { Environment, Interpreter, parse, tokenize }
+export { ast, Environment, Interpreter, LexerError, parse, tokenize }

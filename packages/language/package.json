@@ -1,5 +1,6 @@
 {
   "name": "@jinja-lsp/language",
+  "main": "./out/index.js",
   "scripts": {
     "test": "vitest run"
   },

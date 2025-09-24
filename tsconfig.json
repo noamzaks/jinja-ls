@@ -19,6 +19,12 @@
   "references": [
     {
       "path": "./packages/language"
-    }
+    },
+    {
+      "path": "./packages/server"
+    },
+    {
+      "path": "./packages/client"
+    },
   ]
 }

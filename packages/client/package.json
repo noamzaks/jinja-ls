@@ -1,0 +1,9 @@
+{
+  "name": "@jinja-lsp/client",
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.104.0"
+  }
+}

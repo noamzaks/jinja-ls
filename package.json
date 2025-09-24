@@ -1,6 +1,69 @@
 {
-    "name": "jinja-lsp",
-    "workspaces": [
-        "packages/*"
+  "name": "jinja-lsp",
+  "description": "VSCode part of a language server",
+  "version": "0.0.1",
+  "author": "Noam Zaks <noam@noamzaks.com> (https://noamzaks.com/)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noamzaks/jinja-lsp"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "publisher": "vscode",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "jinja",
+        "aliases": [
+          "Jinja"
+        ],
+        "extensions": [
+          ".jinja",
+          ".jinja2",
+          ".j2"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "jinja-md",
+        "aliases": [
+          "Jinja Markdown",
+          "jinja-md"
+        ],
+        "extensions": [
+          ".md.jinja",
+          ".md.jinja2",
+          ".md.j2"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "jinja",
+        "scopeName": "source.jinja",
+        "path": "./syntaxes/jinja.tmLanguage.json"
+      },
+      {
+        "language": "jinja-md",
+        "scopeName": "text.html.markdown.jinja",
+        "path": "./syntaxes/jinja-md.tmLanguage.json"
+      }
     ]
+  },
+  "private": "true",
+  "main": "./packages/client/out/extension",
+  "scripts": {
+    "compile": "tsc -b",
+    "watch": "tsc -b -w"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "typescript": "^5.9.2"
+  }
 }

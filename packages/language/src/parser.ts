@@ -29,6 +29,7 @@ import {
   TupleLiteral,
   UnaryExpression,
 } from "./ast"
+import { ParserError } from "./errors"
 import type { TokenType } from "./lexer"
 import { Token, TOKEN_TYPES } from "./lexer"
 
@@ -49,22 +50,30 @@ export function parse(tokens: Token[]): Program {
   function expect(type: string, error: string): Token {
     const prev = tokens[current++]
     if (!prev || prev.type !== type) {
-      throw new Error(`Parser Error: ${error}. ${prev.type} !== ${type}.`)
+      throw new ParserError(
+        `Parser Error: ${error}. ${prev.type} !== ${type}.`,
+        tokens[current - 1].start,
+        tokens[current - 1].end
+      )
     }
     return prev
   }
 
-  function expectIdentifier(name: string): void {
+  function expectIdentifier(name: string): Token {
     if (!isIdentifier(name)) {
-      throw new SyntaxError(`Expected ${name}`)
+      throw new ParserError(
+        `Expected ${name}`,
+        tokens[current].start,
+        tokens[current].end
+      )
     }
-    ++current
+    return tokens[current++]
   }
 
   function parseAny(): Statement {
     switch (tokens[current].type) {
       case TOKEN_TYPES.Comment:
-        return new Comment(tokens[current++].value)
+        return new Comment(tokens[current], tokens[current++].value)
       case TOKEN_TYPES.Text:
         return parseText()
       case TOKEN_TYPES.OpenStatement:
@@ -72,7 +81,11 @@ export function parse(tokens: Token[]): Program {
       case TOKEN_TYPES.OpenExpression:
         return parseJinjaExpression()
       default:
-        throw new SyntaxError(`Unexpected token type: ${tokens[current].type}`)
+        throw new ParserError(
+          `Unexpected token type: ${tokens[current].type}`,
+          tokens[current].start,
+          tokens[current].end
+        )
     }
   }
 
@@ -84,6 +97,14 @@ export function parse(tokens: Token[]): Program {
   }
 
   function isStatement(...names: string[]): boolean {
+    if (current >= tokens.length) {
+      throw new ParserError(
+        `Missing ${names.at(-1)} statement`,
+        tokens[tokens.length - 1].end,
+        tokens[tokens.length - 1].end
+      )
+    }
+
     return (
       tokens[current]?.type === TOKEN_TYPES.OpenStatement &&
       tokens[current + 1]?.type === TOKEN_TYPES.Identifier &&
@@ -103,19 +124,27 @@ export function parse(tokens: Token[]): Program {
   }
 
   function parseText(): StringLiteral {
-    return new StringLiteral(
-      expect(TOKEN_TYPES.Text, "Expected text token").value
-    )
+    const token = expect(TOKEN_TYPES.Text, "Expected text token")
+    return new StringLiteral(token.value, [token])
   }
 
   function parseJinjaStatement(): Statement {
     // Consume {% token
-    expect(TOKEN_TYPES.OpenStatement, "Expected opening statement token")
+    const openToken = expect(
+      TOKEN_TYPES.OpenStatement,
+      "Expected opening statement token"
+    )
+    let closeToken: Token | undefined = undefined
 
     // next token must be Identifier whose .value tells us which statement
     if (tokens[current].type !== TOKEN_TYPES.Identifier) {
-      throw new SyntaxError(`Unknown statement, got ${tokens[current].type}`)
+      throw new ParserError(
+        `Unknown statement, got ${tokens[current].type}`,
+        tokens[current].start,
+        tokens[current].end
+      )
     }
+    const identifier = tokens[current]
     const name = tokens[current].value
     let result: Statement
     switch (name) {
@@ -127,58 +156,108 @@ export function parse(tokens: Token[]): Program {
         ++current
         result = parseIfStatement()
         // expect {% endif %}
-        expect(TOKEN_TYPES.OpenStatement, "Expected {% token")
-        expectIdentifier("endif")
-        expect(TOKEN_TYPES.CloseStatement, "Expected %} token")
+        result.closerOpenToken = expect(
+          TOKEN_TYPES.OpenStatement,
+          "Expected {% token"
+        )
+        result.closerIdentifier = expectIdentifier("endif")
+        result.closerCloseToken = expect(
+          TOKEN_TYPES.CloseStatement,
+          "Expected %} token"
+        )
         break
       case "macro":
         ++current
         result = parseMacroStatement()
         // expect {% endmacro %}
-        expect(TOKEN_TYPES.OpenStatement, "Expected {% token")
-        expectIdentifier("endmacro")
-        expect(TOKEN_TYPES.CloseStatement, "Expected %} token")
+        result.closerOpenToken = expect(
+          TOKEN_TYPES.OpenStatement,
+          "Expected {% token"
+        )
+        result.closerIdentifier = expectIdentifier("endmacro")
+        result.closerCloseToken = expect(
+          TOKEN_TYPES.CloseStatement,
+          "Expected %} token"
+        )
         break
       case "for":
         ++current
         result = parseForStatement()
         // expect {% endfor %}
-        expect(TOKEN_TYPES.OpenStatement, "Expected {% token")
-        expectIdentifier("endfor")
-        expect(TOKEN_TYPES.CloseStatement, "Expected %} token")
+        result.closerOpenToken = expect(
+          TOKEN_TYPES.OpenStatement,
+          "Expected {% token"
+        )
+        result.closerIdentifier = expectIdentifier("endfor")
+        result.closerCloseToken = expect(
+          TOKEN_TYPES.CloseStatement,
+          "Expected %} token"
+        )
         break
       case "call": {
         ++current // consume 'call'
-        let callerArgs: Statement[] | null = null
+        let callerArgs: [Token, Statement[], Token] | null = null
         if (is(TOKEN_TYPES.OpenParen)) {
           // Optional caller arguments, e.g. {% call(user) dump_users(...) %}
           callerArgs = parseArgs()
         }
+
+        const calleeStart = current
         const callee = parsePrimaryExpression()
         if (callee.type !== "Identifier") {
-          throw new SyntaxError(`Expected identifier following call statement`)
+          throw new ParserError(
+            `Expected identifier following call statement`,
+            tokens[calleeStart].start,
+            tokens[current - 1].end
+          )
         }
-        const callArgs = parseArgs()
-        expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
+        const [callOpenParen, callArgs, callCloseParen] = parseArgs()
+        closeToken = expect(
+          TOKEN_TYPES.CloseStatement,
+          "Expected closing statement token"
+        )
         const body: Statement[] = []
         while (!isStatement("endcall")) {
           body.push(parseAny())
         }
-        expect(TOKEN_TYPES.OpenStatement, "Expected '{%'")
-        expectIdentifier("endcall")
-        expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
-        const callExpr = new CallExpression(callee, callArgs)
-        result = new CallStatement(callExpr, callerArgs, body)
+        const callExpr = new CallExpression(
+          callee,
+          callArgs,
+          callOpenParen,
+          callCloseParen
+        )
+        result = new CallStatement(
+          callExpr,
+          callerArgs?.[1] ?? null,
+          body,
+          callerArgs?.[0],
+          callerArgs?.[2]
+        )
+        result.closerOpenToken = expect(
+          TOKEN_TYPES.OpenStatement,
+          "Expected '{%'"
+        )
+        result.closerIdentifier = expectIdentifier("endcall")
+        result.closerCloseToken = expect(
+          TOKEN_TYPES.CloseStatement,
+          "Expected closing statement token"
+        )
         break
       }
       case "break":
         ++current
-        expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
+        closeToken = expect(
+          TOKEN_TYPES.CloseStatement,
+          "Expected closing statement token"
+        )
         result = new Break()
         break
       case "continue":
         ++current
-        expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
+        closeToken = expect(
+          TOKEN_TYPES.CloseStatement,
+          "Expected closing statement token"
+        )
         result = new Continue()
         break
       case "filter": {
@@ -187,22 +266,40 @@ export function parse(tokens: Token[]): Program {
         if (filterNode instanceof Identifier && is(TOKEN_TYPES.OpenParen)) {
           filterNode = parseCallExpression(filterNode)
         }
-        expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
+        closeToken = expect(
+          TOKEN_TYPES.CloseStatement,
+          "Expected closing statement token"
+        )
         const filterBody: Statement[] = []
         while (!isStatement("endfilter")) {
           filterBody.push(parseAny())
         }
-        expect(TOKEN_TYPES.OpenStatement, "Expected '{%'")
-        expectIdentifier("endfilter")
-        expect(TOKEN_TYPES.CloseStatement, "Expected '%}'")
         result = new FilterStatement(
           filterNode as Identifier | CallExpression,
           filterBody
         )
+        result.closerOpenToken = expect(
+          TOKEN_TYPES.OpenStatement,
+          "Expected '{%'"
+        )
+        result.closerIdentifier = expectIdentifier("endfilter")
+        result.closerCloseToken = expect(
+          TOKEN_TYPES.CloseStatement,
+          "Expected '%}'"
+        )
         break
       }
       default:
-        throw new SyntaxError(`Unknown statement type: ${name}`)
+        throw new ParserError(
+          `Unknown statement type: ${name}`,
+          tokens[current].start,
+          tokens[current].end
+        )
+    }
+    result.openToken = openToken
+    result.identifier = identifier
+    if (closeToken) {
+      result.closeToken = closeToken
     }
 
     return result
@@ -210,11 +307,19 @@ export function parse(tokens: Token[]): Program {
 
   function parseJinjaExpression(): Statement {
     // Consume {{ }} tokens
-    expect(TOKEN_TYPES.OpenExpression, "Expected opening expression token")
+    const openToken = expect(
+      TOKEN_TYPES.OpenExpression,
+      "Expected opening expression token"
+    )
 
     const result = parseExpression()
+    result.openToken = openToken
 
-    expect(TOKEN_TYPES.CloseExpression, "Expected closing expression token")
+    result.closeToken = expect(
+      TOKEN_TYPES.CloseExpression,
+      "Expected closing expression token"
+    )
+
     return result
   }
 
@@ -223,26 +328,48 @@ export function parse(tokens: Token[]): Program {
     const left = parseExpressionSequence()
     let value: Statement | null = null
     const body: Statement[] = []
+    let equalsToken: Token | undefined = undefined
+    let closeToken: Token | undefined = undefined
+    let closerOpenToken: Token | undefined = undefined
+    let closerIdentifier: Token | undefined = undefined
     if (is(TOKEN_TYPES.Equals)) {
+      equalsToken = tokens[current]
       ++current
       value = parseExpressionSequence()
     } else {
       // parsing multiline set here
-      expect(TOKEN_TYPES.CloseStatement, "Expected %} token")
+      closeToken = expect(TOKEN_TYPES.CloseStatement, "Expected %} token")
       while (!isStatement("endset")) {
         body.push(parseAny())
       }
-      expect(TOKEN_TYPES.OpenStatement, "Expected {% token")
-      expectIdentifier("endset")
+      closerOpenToken = expect(TOKEN_TYPES.OpenStatement, "Expected {% token")
+      closerIdentifier = expectIdentifier("endset")
     }
-    expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
-    return new SetStatement(left, value, body)
+    const result = new SetStatement(left, value, body, equalsToken)
+    if (closeToken) {
+      result.closeToken = closeToken
+      result.closerOpenToken = closerOpenToken
+      result.closerIdentifier = closerIdentifier
+      result.closerCloseToken = expect(
+        TOKEN_TYPES.CloseStatement,
+        "Expected closing statement token"
+      )
+    } else {
+      result.closeToken = expect(
+        TOKEN_TYPES.CloseStatement,
+        "Expected closing statement token"
+      )
+    }
+    return result
   }
 
   function parseIfStatement(): If {
     const test = parseExpression()
 
-    expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
+    test.closeToken = expect(
+      TOKEN_TYPES.CloseStatement,
+      "Expected closing statement token"
+    )
 
     const body: Statement[] = []
     const alternate: Statement[] = []
@@ -252,18 +379,30 @@ export function parse(tokens: Token[]): Program {
       body.push(parseAny())
     }
 
+    let elseOpenToken: Token | undefined = undefined
+    let elseIdentifier: Token | undefined = undefined
+    let elseCloseToken: Token | undefined = undefined
     // handle {% elif %}
     if (isStatement("elif")) {
+      const elifOpenToken = tokens[current]
       ++current // consume {%
+      const elifIdentifier = tokens[current]
       ++current // consume 'elif'
       const result = parseIfStatement() // nested If
+      result.openToken = elifOpenToken
+      result.identifier = elifIdentifier
       alternate.push(result)
     }
     // handle {% else %}
     else if (isStatement("else")) {
+      elseOpenToken = tokens[current]
       ++current // consume {%
+      elseIdentifier = tokens[current]
       ++current // consume 'else'
-      expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
+      elseCloseToken = expect(
+        TOKEN_TYPES.CloseStatement,
+        "Expected closing statement token"
+      )
 
       // keep going until we hit {% endif %}
       while (!isStatement("endif")) {
@@ -271,16 +410,31 @@ export function parse(tokens: Token[]): Program {
       }
     }
 
-    return new If(test, body, alternate)
+    return new If(
+      test,
+      body,
+      alternate,
+      elseOpenToken,
+      elseIdentifier,
+      elseCloseToken
+    )
   }
 
   function parseMacroStatement(): Macro {
+    const nameStart = current
     const name = parsePrimaryExpression()
     if (name.type !== "Identifier") {
-      throw new SyntaxError(`Expected identifier following macro statement`)
+      throw new ParserError(
+        `Expected identifier following macro statement`,
+        tokens[nameStart].start,
+        tokens[current - 1].end
+      )
     }
-    const args = parseArgs()
-    expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
+    const [argsOpenParen, args, argsCloseParen] = parseArgs()
+    const closeToken = expect(
+      TOKEN_TYPES.CloseStatement,
+      "Expected closing statement token"
+    )
 
     // Body of macro
     const body: Statement[] = []
@@ -290,7 +444,15 @@ export function parse(tokens: Token[]): Program {
       body.push(parseAny())
     }
 
-    return new Macro(name as Identifier, args, body)
+    const result = new Macro(
+      name as Identifier,
+      args,
+      body,
+      argsOpenParen,
+      argsCloseParen
+    )
+    result.closeToken = closeToken
+    return result
   }
 
   function parseExpressionSequence(primary = false): Statement {
@@ -309,6 +471,7 @@ export function parse(tokens: Token[]): Program {
 
   function parseForStatement(): For {
     // e.g., `message` in `for message in messages`
+    const loopVariableStart = current
     const loopVariable = parseExpressionSequence(true) // should be an identifier/tuple
     if (
       !(
@@ -316,41 +479,67 @@ export function parse(tokens: Token[]): Program {
         loopVariable instanceof TupleLiteral
       )
     ) {
-      throw new SyntaxError(
-        `Expected identifier/tuple for the loop variable, got ${loopVariable.type} instead`
+      throw new ParserError(
+        `Expected identifier/tuple for the loop variable, got ${loopVariable.type} instead`,
+        tokens[loopVariableStart].start,
+        tokens[current - 1].end
       )
     }
 
     if (!isIdentifier("in")) {
-      throw new SyntaxError("Expected `in` keyword following loop variable")
+      throw new ParserError(
+        "Expected `in` keyword following loop variable",
+        tokens[current].start,
+        tokens[current].end
+      )
     }
-    ++current
+    const inToken = tokens[current++]
 
     // `messages` in `for message in messages`
     const iterable = parseExpression()
 
-    expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
+    const closeToken = expect(
+      TOKEN_TYPES.CloseStatement,
+      "Expected closing statement token"
+    )
 
     // Body of for loop
     const body: Statement[] = []
 
     // Keep going until we hit {% endfor or {% else
-    while (!isStatement("endfor", "else")) {
+    while (!isStatement("else", "endfor")) {
       body.push(parseAny())
     }
 
     // (Optional) else block
     const alternative: Statement[] = []
+    let elseOpenToken: Token | undefined = undefined
+    let elseIdentifier: Token | undefined = undefined
+    let elseCloseToken: Token | undefined = undefined
     if (isStatement("else")) {
-      ++current // consume {%
-      ++current // consume 'else'
-      expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
+      elseOpenToken = tokens[current++] // consume {%
+      elseIdentifier = tokens[current++] // consume 'else'
+      elseCloseToken = expect(
+        TOKEN_TYPES.CloseStatement,
+        "Expected closing statement token"
+      )
       while (!isStatement("endfor")) {
         alternative.push(parseAny())
       }
     }
 
-    return new For(loopVariable, iterable, body, alternative)
+    const result = new For(
+      loopVariable,
+      iterable,
+      body,
+      alternative,
+      inToken,
+      elseOpenToken,
+      elseIdentifier,
+      elseCloseToken
+    )
+    result.closeToken = closeToken
+    return result
   }
 
   function parseExpression(): Statement {
@@ -362,17 +551,17 @@ export function parse(tokens: Token[]): Program {
     const a = parseLogicalOrExpression()
     if (isIdentifier("if")) {
       // Ternary expression
-      ++current // consume 'if'
+      const ifToken = tokens[current++] // consume 'if'
       const test = parseLogicalOrExpression()
 
       if (isIdentifier("else")) {
         // Ternary expression with else
-        ++current // consume 'else'
+        const elseToken = tokens[current++] // consume 'else'
         const falseExpr = parseIfExpression() // recurse to support chained ternaries
-        return new Ternary(test, a, falseExpr)
+        return new Ternary(test, a, falseExpr, ifToken, elseToken)
       } else {
         // Select expression on iterable
-        return new SelectExpression(a, test)
+        return new SelectExpression(a, test, ifToken)
       }
     }
     return a
@@ -465,7 +654,13 @@ export function parse(tokens: Token[]): Program {
   }
 
   function parseCallExpression(callee: Statement): Statement {
-    let expression: Statement = new CallExpression(callee, parseArgs())
+    const [openToken, args, closeToken] = parseArgs()
+    let expression: Statement = new CallExpression(
+      callee,
+      args,
+      openToken,
+      closeToken
+    )
 
     expression = parseMemberExpression(expression) // foo.x().y
 
@@ -477,20 +672,20 @@ export function parse(tokens: Token[]): Program {
     return expression
   }
 
-  function parseArgs(): Statement[] {
+  function parseArgs(): [Token, Statement[], Token] {
     // add (x + 5, foo())
-    expect(
+    const openToken = expect(
       TOKEN_TYPES.OpenParen,
       "Expected opening parenthesis for arguments list"
     )
 
     const args = parseArgumentsList()
 
-    expect(
+    const closeToken = expect(
       TOKEN_TYPES.CloseParen,
       "Expected closing parenthesis for arguments list"
     )
-    return args
+    return [openToken, args, closeToken]
   }
   function parseArgumentsList(): Statement[] {
     // comma-separated arguments list
@@ -504,22 +699,28 @@ export function parse(tokens: Token[]): Program {
         tokens[current].type === TOKEN_TYPES.MultiplicativeBinaryOperator &&
         tokens[current].value === "*"
       ) {
-        ++current
+        const operatorToken = tokens[current++]
         const expr = parseExpression()
-        argument = new SpreadExpression(expr)
+        argument = new SpreadExpression(expr, operatorToken)
       } else {
+        const argumentStart = current
         argument = parseExpression()
         if (is(TOKEN_TYPES.Equals)) {
           // keyword argument
           // e.g., func(x = 5, y = a or b)
-          ++current // consume equals
+          const equalsToken = tokens[current++] // consume equals
           if (!(argument instanceof Identifier)) {
-            throw new SyntaxError(`Expected identifier for keyword argument`)
+            throw new ParserError(
+              `Expected identifier for keyword argument`,
+              tokens[argumentStart].start,
+              tokens[current - 1].end
+            )
           }
           const value = parseExpression()
           argument = new KeywordArgumentExpression(
             argument as Identifier,
-            value
+            value,
+            equalsToken
           )
         }
       }
@@ -535,6 +736,7 @@ export function parse(tokens: Token[]): Program {
     // NOTE: This also handles slice expressions colon-separated arguments list
     // e.g., ['test'], [0], [:2], [1:], [1:2], [1:2:3]
 
+    const startToken = current - 1
     const slices: (Statement | undefined)[] = []
     let isSlice = false
     while (!is(TOKEN_TYPES.CloseSquareBracket)) {
@@ -554,14 +756,20 @@ export function parse(tokens: Token[]): Program {
     }
     if (slices.length === 0) {
       // []
-      throw new SyntaxError(
-        `Expected at least one argument for member/slice expression`
+      throw new ParserError(
+        `Expected at least one argument for member/slice expression`,
+        tokens[startToken].start,
+        tokens[current].end
       )
     }
 
     if (isSlice) {
       if (slices.length > 3) {
-        throw new SyntaxError(`Expected 0-3 arguments for slice expression`)
+        throw new ParserError(
+          `Expected 0-3 arguments for slice expression`,
+          tokens[startToken].start,
+          tokens[current].end
+        )
       }
       return new SliceExpression(...slices)
     }
@@ -584,9 +792,14 @@ export function parse(tokens: Token[]): Program {
         )
       } else {
         // non-computed (i.e., dot notation: obj.expr)
+        const propertyStart = current
         property = parsePrimaryExpression() // should be an identifier
         if (property.type !== "Identifier") {
-          throw new SyntaxError(`Expected identifier following dot operator`)
+          throw new ParserError(
+            `Expected identifier following dot operator`,
+            tokens[propertyStart].start,
+            tokens[current - 1].end
+          )
         }
       }
       object = new MemberExpression(object, property, computed)
@@ -613,18 +826,24 @@ export function parse(tokens: Token[]): Program {
 
     while (isIdentifier("is")) {
       // Support chaining tests
-      ++current // consume is
+      const isToken = tokens[current++] // consume is
+      let notToken: Token | undefined = undefined
       const negate = isIdentifier("not")
       if (negate) {
-        ++current // consume not
+        notToken = tokens[current++] // consume not
       }
 
+      const filterStart = current
       const filter = parsePrimaryExpression()
       if (!(filter instanceof Identifier)) {
-        throw new SyntaxError(`Expected identifier for the test`)
+        throw new ParserError(
+          `Expected identifier for the test`,
+          tokens[filterStart].start,
+          tokens[current - 1].end
+        )
       }
       // TODO: Add support for non-identifier tests
-      operand = new TestExpression(operand, negate, filter)
+      operand = new TestExpression(operand, negate, filter, isToken, notToken)
     }
     return operand
   }
@@ -634,17 +853,23 @@ export function parse(tokens: Token[]): Program {
 
     while (is(TOKEN_TYPES.Pipe)) {
       // Support chaining filters
-      ++current // consume pipe
+      const pipeToken = tokens[current++] // consume pipe
+      const filterStart = current
       let filter = parsePrimaryExpression() // should be an identifier
       if (!(filter instanceof Identifier)) {
-        throw new SyntaxError(`Expected identifier for the filter`)
+        throw new ParserError(
+          `Expected identifier for the filter`,
+          tokens[filterStart].start,
+          tokens[current - 1].end
+        )
       }
       if (is(TOKEN_TYPES.OpenParen)) {
         filter = parseCallExpression(filter)
       }
       operand = new FilterExpression(
         operand,
-        filter as Identifier | CallExpression
+        filter as Identifier | CallExpression,
+        pipeToken
       )
     }
     return operand
@@ -657,18 +882,20 @@ export function parse(tokens: Token[]): Program {
       case TOKEN_TYPES.NumericLiteral: {
         const num = token.value
         return num.includes(".")
-          ? new FloatLiteral(Number(num))
-          : new IntegerLiteral(Number(num))
+          ? new FloatLiteral(Number(num), token)
+          : new IntegerLiteral(Number(num), token)
       }
       case TOKEN_TYPES.StringLiteral: {
+        const currentTokens = [token]
         let value = token.value
         while (is(TOKEN_TYPES.StringLiteral)) {
+          currentTokens.push(tokens[current])
           value += tokens[current++].value
         }
-        return new StringLiteral(value)
+        return new StringLiteral(value, currentTokens)
       }
       case TOKEN_TYPES.Identifier:
-        return new Identifier(token.value)
+        return new Identifier(token.value, token)
       case TOKEN_TYPES.OpenParen: {
         const expression = parseExpressionSequence()
         expect(
@@ -686,9 +913,9 @@ export function parse(tokens: Token[]): Program {
             ++current // consume comma
           }
         }
-        ++current // consume closing square bracket
+        const closeToken = tokens[current++] // consume closing square bracket
 
-        return new ArrayLiteral(values)
+        return new ArrayLiteral(values, token, closeToken)
       }
       case TOKEN_TYPES.OpenCurlyBracket: {
         const values = new Map()
@@ -705,12 +932,16 @@ export function parse(tokens: Token[]): Program {
             ++current // consume comma
           }
         }
-        ++current // consume closing curly bracket
+        const closeToken = tokens[current++] // consume closing curly bracket
 
-        return new ObjectLiteral(values)
+        return new ObjectLiteral(values, token, closeToken)
       }
       default:
-        throw new SyntaxError(`Unexpected token: ${token.type}`)
+        throw new ParserError(
+          `Unexpected token: ${token.type}`,
+          token.start,
+          token.end
+        )
     }
   }
 

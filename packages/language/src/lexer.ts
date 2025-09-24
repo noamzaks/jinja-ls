@@ -1,3 +1,5 @@
+import { LexerError } from "./errors"
+
 /**
  * Represents tokens that our language understands in parsing.
  */
@@ -160,13 +162,21 @@ export function tokenize(
         ++cursorPosition
         // Check for end of input
         if (cursorPosition >= source.length)
-          throw new SyntaxError("Unexpected end of input")
+          throw new LexerError(
+            "Unexpected end of input",
+            cursorPosition - 1,
+            source.length
+          )
 
         // Add the escaped character
         const escaped = source[cursorPosition++]
         const unescaped = ESCAPE_CHARACTERS.get(escaped)
         if (unescaped === undefined) {
-          throw new SyntaxError(`Unexpected escaped character: ${escaped}`)
+          throw new LexerError(
+            `Unexpected escaped character: ${escaped}`,
+            cursorPosition - 2,
+            cursorPosition
+          )
         }
         str += unescaped
         continue
@@ -174,7 +184,11 @@ export function tokenize(
 
       str += source[cursorPosition++]
       if (cursorPosition >= source.length)
-        throw new SyntaxError("Unexpected end of input")
+        throw new LexerError(
+          "Unexpected end of input",
+          cursorPosition - 1,
+          source.length
+        )
     }
     return str
   }
@@ -246,7 +260,11 @@ export function tokenize(
       ) {
         // Check for end of input
         if (cursorPosition + 2 >= source.length) {
-          throw new SyntaxError("Missing end of comment tag")
+          throw new LexerError(
+            "Missing end of comment tag",
+            source.length,
+            source.length
+          )
         }
         comment += source[cursorPosition++]
       }
@@ -271,7 +289,11 @@ export function tokenize(
     if (char === "-" || char === "+") {
       const lastTokenType = tokens.at(-1)?.type
       if (lastTokenType === TOKEN_TYPES.Text || lastTokenType === undefined) {
-        throw new SyntaxError(`Unexpected character: ${char}`)
+        throw new LexerError(
+          `Unexpected character: ${char}`,
+          cursorPosition,
+          cursorPosition
+        )
       }
       switch (lastTokenType) {
         case TOKEN_TYPES.Identifier:
@@ -365,7 +387,11 @@ export function tokenize(
       continue
     }
 
-    throw new SyntaxError(`Unexpected character: ${char}`)
+    throw new LexerError(
+      `Unexpected character: ${char}`,
+      cursorPosition,
+      cursorPosition
+    )
   }
   return tokens
 }

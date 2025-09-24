@@ -5,6 +5,15 @@ import type { Token } from "./lexer"
  */
 export class Statement {
   type = "Statement"
+
+  constructor(
+    public openToken: Token | undefined = undefined,
+    public closeToken: Token | undefined = undefined,
+    public identifier: Token | undefined = undefined,
+    public closerOpenToken: Token | undefined = undefined,
+    public closerCloseToken: Token | undefined = undefined,
+    public closerIdentifier: Token | undefined = undefined
+  ) {}
 }
 
 /**
@@ -25,6 +34,9 @@ export class If extends Statement {
     public test: Expression,
     public body: Statement[],
     public alternate: Statement[],
+    public elseOpenToken: Token | undefined = undefined,
+    public elseIdentifier: Token | undefined = undefined,
+    public elseCloseToken: Token | undefined = undefined
   ) {
     super()
   }
@@ -42,6 +54,10 @@ export class For extends Statement {
     public iterable: Expression,
     public body: Statement[],
     public defaultBlock: Statement[], // if no iteration took place
+    public inToken: Token,
+    public elseOpenToken: Token | undefined = undefined,
+    public elseIdentifier: Token | undefined = undefined,
+    public elseCloseToken: Token | undefined = undefined
   ) {
     super()
   }
@@ -60,6 +76,7 @@ export class SetStatement extends Statement {
     public assignee: Expression,
     public value: Expression | null,
     public body: Statement[],
+    public equalsToken: Token | undefined = undefined
   ) {
     super()
   }
@@ -72,6 +89,8 @@ export class Macro extends Statement {
     public name: Identifier,
     public args: Expression[],
     public body: Statement[],
+    public openParenToken: Token | undefined = undefined,
+    public closeParenToken: Token | undefined = undefined
   ) {
     super()
   }
@@ -79,7 +98,8 @@ export class Macro extends Statement {
 
 export class Comment extends Statement {
   override type = "Comment"
-  constructor(public value: string) {
+
+  constructor(public token: Token, public value: string) {
     super()
   }
 }
@@ -97,7 +117,7 @@ export class MemberExpression extends Expression {
   constructor(
     public object: Expression,
     public property: Expression,
-    public computed: boolean,
+    public computed: boolean
   ) {
     super()
   }
@@ -109,6 +129,8 @@ export class CallExpression extends Expression {
   constructor(
     public callee: Expression,
     public args: Expression[],
+    public openParenToken: Token | undefined = undefined,
+    public closeParenToken: Token | undefined = undefined
   ) {
     super()
   }
@@ -123,7 +145,7 @@ export class Identifier extends Expression {
   /**
    * @param {string} value The name of the identifier
    */
-  constructor(public value: string) {
+  constructor(public value: string, public token: Token) {
     super()
   }
 }
@@ -142,10 +164,18 @@ abstract class Literal<T> extends Expression {
 
 export class IntegerLiteral extends Literal<number> {
   override type = "IntegerLiteral"
+
+  constructor(public value: number, public token: Token) {
+    super(value)
+  }
 }
 
 export class FloatLiteral extends Literal<number> {
   override type = "FloatLiteral"
+
+  constructor(public value: number, public token: Token) {
+    super(value)
+  }
 }
 
 /**
@@ -153,6 +183,10 @@ export class FloatLiteral extends Literal<number> {
  */
 export class StringLiteral extends Literal<string> {
   override type = "StringLiteral"
+
+  constructor(public value: string, public tokens: Token[]) {
+    super(value)
+  }
 }
 
 /**
@@ -160,6 +194,14 @@ export class StringLiteral extends Literal<string> {
  */
 export class ArrayLiteral extends Literal<Expression[]> {
   override type = "ArrayLiteral"
+
+  constructor(
+    public value: Expression[],
+    public openBracketToken: Token,
+    public closeBracketToken: Token
+  ) {
+    super(value)
+  }
 }
 
 /**
@@ -174,6 +216,14 @@ export class TupleLiteral extends Literal<Expression[]> {
  */
 export class ObjectLiteral extends Literal<Map<Expression, Expression>> {
   override type = "ObjectLiteral"
+
+  constructor(
+    public value: Map<Expression, Expression>,
+    public openBracketToken: Token,
+    public closeBracketToken: Token
+  ) {
+    super(value)
+  }
 }
 
 /**
@@ -187,7 +237,7 @@ export class BinaryExpression extends Expression {
   constructor(
     public operator: Token,
     public left: Expression,
-    public right: Expression,
+    public right: Expression
   ) {
     super()
   }
@@ -203,6 +253,7 @@ export class FilterExpression extends Expression {
   constructor(
     public operand: Expression,
     public filter: Identifier | CallExpression,
+    public pipeToken: Token
   ) {
     super()
   }
@@ -213,7 +264,7 @@ export class FilterStatement extends Statement {
 
   constructor(
     public filter: Identifier | CallExpression,
-    public body: Statement[],
+    public body: Statement[]
   ) {
     super()
   }
@@ -231,6 +282,7 @@ export class SelectExpression extends Expression {
   constructor(
     public lhs: Expression,
     public test: Expression,
+    public ifToken: Token | undefined = undefined
   ) {
     super()
   }
@@ -246,6 +298,8 @@ export class TestExpression extends Expression {
     public operand: Expression,
     public negate: boolean,
     public test: Identifier, // TODO: Add support for non-identifier tests
+    public isToken: Token,
+    public notToken: Token | undefined = undefined
   ) {
     super()
   }
@@ -257,10 +311,7 @@ export class TestExpression extends Expression {
 export class UnaryExpression extends Expression {
   override type = "UnaryExpression"
 
-  constructor(
-    public operator: Token,
-    public argument: Expression,
-  ) {
+  constructor(public operator: Token, public argument: Expression) {
     super()
   }
 }
@@ -271,7 +322,7 @@ export class SliceExpression extends Expression {
   constructor(
     public start: Expression | undefined = undefined,
     public stop: Expression | undefined = undefined,
-    public step: Expression | undefined = undefined,
+    public step: Expression | undefined = undefined
   ) {
     super()
   }
@@ -283,6 +334,7 @@ export class KeywordArgumentExpression extends Expression {
   constructor(
     public key: Identifier,
     public value: Expression,
+    public equalsToken: Token
   ) {
     super()
   }
@@ -291,7 +343,7 @@ export class KeywordArgumentExpression extends Expression {
 export class SpreadExpression extends Expression {
   override type = "SpreadExpression"
 
-  constructor(public argument: Expression) {
+  constructor(public argument: Expression, public operatorToken: Token) {
     super()
   }
 }
@@ -303,6 +355,8 @@ export class CallStatement extends Statement {
     public call: CallExpression,
     public callerArgs: Expression[] | null,
     public body: Statement[],
+    public openParenToken: Token | undefined = undefined,
+    public closeParenToken: Token | undefined = undefined
   ) {
     super()
   }
@@ -314,6 +368,8 @@ export class Ternary extends Expression {
     public condition: Expression,
     public trueExpr: Expression,
     public falseExpr: Expression,
+    public ifToken: Token,
+    public elseToken: Token
   ) {
     super()
   }
