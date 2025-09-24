@@ -1,4 +1,3 @@
-import type { Statement } from "./ast"
 import {
   ArrayLiteral,
   BinaryExpression,
@@ -14,16 +13,19 @@ import {
   For,
   Identifier,
   If,
+  Include,
   IntegerLiteral,
   KeywordArgumentExpression,
   Macro,
   MemberExpression,
   ObjectLiteral,
   Program,
+  Raw,
   SelectExpression,
   SetStatement,
   SliceExpression,
   SpreadExpression,
+  Statement,
   StringLiteral,
   Ternary,
   TestExpression,
@@ -150,6 +152,14 @@ export function parse(tokens: Token[]): Program {
     const name = tokens[current].value
     let result: Statement
     switch (name) {
+      case "raw":
+        ++current
+        result = parseRawStatement()
+        break
+      case "include":
+        ++current
+        result = parseIncludeStatement()
+        break
       case "set":
         ++current
         result = parseSetStatement()
@@ -352,6 +362,44 @@ export function parse(tokens: Token[]): Program {
     )
 
     return result
+  }
+
+  function parseIncludeStatement(): Include {
+    const nameStart = current
+    const name = parsePrimaryExpression()
+    if (name.type !== "StringLiteral") {
+      throw new ParserError(
+        `Expected string literal following include statement`,
+        tokens[nameStart].start,
+        tokens[current - 1].end
+      )
+    }
+    const result = new Include(name as StringLiteral)
+    result.addChild(
+      new TokenNode(expect(TOKEN_TYPES.CloseStatement, "Expected %} token")),
+      "closeToken"
+    )
+    return result
+  }
+
+  function parseRawStatement(): Raw {
+    const body: Statement[] = []
+    const closeToken = expect(TOKEN_TYPES.CloseStatement, "Expected %} token")
+    while (!isStatement("endraw")) {
+      current++
+    }
+    const raw = new Raw(body)
+    raw.addChild(new TokenNode(closeToken), "closeToken")
+    raw.addChild(
+      new TokenNode(expect(TOKEN_TYPES.OpenStatement, "Expected {% token")),
+      "closerOpenToken"
+    )
+    raw.addChild(new TokenNode(expectIdentifier("endraw")), "closerIdentifier")
+    raw.addChild(
+      new TokenNode(expect(TOKEN_TYPES.CloseStatement, "Expected %} token")),
+      "closerCloseToken"
+    )
+    return raw
   }
 
   // NOTE: `set` acts as both declaration statement and assignment expression

@@ -19,7 +19,7 @@
         }
       },
       "end": "({%)\\s*(endraw)\\s*(%})",
-      "name": "comment.block.jinja.raw"
+      "name": "text.plain"
     },
     {
       "include": "#comments"

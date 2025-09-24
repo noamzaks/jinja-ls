@@ -20,6 +20,7 @@ export const legend: lsp.SemanticTokensLegend = {
     "keyword",
     "variable",
     "property",
+    "text",
   ],
   tokenModifiers: ["definition", "modification", "defaultLibrary", "readonly"],
 }
@@ -86,6 +87,19 @@ export const getTokens = (statements: ast.Statement[]) => {
         break
       case "Continue":
         const continueStatement = statement as ast.Continue
+        break
+      case "Raw":
+        const rawStatement = statement as ast.Raw
+        items.push({
+          start: rawStatement.closeToken!.end,
+          end: rawStatement.closerOpenToken!.start,
+          tokenType: 11,
+          tokenModifiers: 0,
+        })
+        break
+      case "Include":
+        const includeStatement = statement as ast.Include
+        statements.push(includeStatement.name)
         break
       case "Set":
         const setStatement = statement as ast.SetStatement

@@ -165,6 +165,23 @@ export class SetStatement extends Statement {
   }
 }
 
+export class Raw extends Statement {
+  override type = "Raw"
+
+  constructor(public body: Statement[]) {
+    super()
+    this.addChildren(...body)
+  }
+}
+
+export class Include extends Statement {
+  override type = "Include"
+
+  constructor(public name: StringLiteral) {
+    super()
+  }
+}
+
 export class Macro extends Statement {
   override type = "Macro"
 
