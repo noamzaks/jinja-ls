@@ -1,5 +1,4 @@
 import { ast, LexerError, parse, tokenize } from "@jinja-lsp/language"
-import { ParserError } from "@jinja-lsp/language/out/errors"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { createConnection } from "vscode-languageserver/node"
@@ -11,7 +10,11 @@ const connection = createConnection(lsp.ProposedFeatures.all)
 const documents = new lsp.TextDocuments(TextDocument)
 const documentASTs: Map<
   string,
-  { program?: ast.Program; error?: LexerError | ParserError }
+  {
+    program?: ast.Program
+    errors?: ast.ErrorNode[]
+    error?: LexerError
+  }
 > = new Map()
 
 connection.onInitialize((params) => {
@@ -44,10 +47,10 @@ documents.onDidChangeContent((event) => {
 const getDocumentAST = (contents: string) => {
   try {
     const tokens = tokenize(contents)
-    const program = parse(tokens)
-    return { program }
+    const [program, errors] = parse(tokens, true)
+    return { program, errors }
   } catch (e) {
-    if (e instanceof LexerError || e instanceof ParserError) {
+    if (e instanceof LexerError) {
       return { error: e }
     }
   }
@@ -55,18 +58,43 @@ const getDocumentAST = (contents: string) => {
 }
 
 connection.languages.diagnostics.on(async (params) => {
-  const error = documentASTs.get(params.textDocument.uri)?.error
+  const ast = documentASTs.get(params.textDocument.uri)
+  const errors = ast?.errors
+  const error = ast?.error
   const items: lsp.Diagnostic[] = []
   const document = documents.get(params.textDocument.uri)
-  if (error && document !== undefined) {
-    items.push({
-      message: error.message,
-      range: lsp.Range.create(
-        document.positionAt(error.start),
-        document.positionAt(error.end)
-      ),
-      severity: lsp.DiagnosticSeverity.Error,
-    })
+  if (document !== undefined) {
+    if (error) {
+      items.push({
+        message: error.message,
+        range: lsp.Range.create(
+          document.positionAt(error.start),
+          document.positionAt(error.end)
+        ),
+        severity: lsp.DiagnosticSeverity.Error,
+      })
+    }
+    for (const e of errors ?? []) {
+      if (e.type === "MissingNode") {
+        const missingNode = e as ast.MissingNode
+        const position = document.positionAt(missingNode.before.start)
+        items.push({
+          message: `Expected ${missingNode.missingType}`,
+          range: lsp.Range.create(position, position),
+          severity: lsp.DiagnosticSeverity.Error,
+        })
+      } else if (e.type === "UnexpectedToken") {
+        const UnexpectedToken = e as ast.UnexpectedToken
+        items.push({
+          message: `Unexpected ${UnexpectedToken.message}`,
+          range: lsp.Range.create(
+            document.positionAt(UnexpectedToken.token.start),
+            document.positionAt(UnexpectedToken.token.end)
+          ),
+          severity: lsp.DiagnosticSeverity.Error,
+        })
+      }
+    }
   }
 
   return {

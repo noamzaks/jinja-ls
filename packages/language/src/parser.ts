@@ -7,6 +7,7 @@ import {
   Comment,
   Continue,
   createTokenNode,
+  ErrorNode,
   FilterExpression,
   FilterStatement,
   FloatLiteral,
@@ -18,6 +19,8 @@ import {
   KeywordArgumentExpression,
   Macro,
   MemberExpression,
+  MissingNode,
+  Node,
   ObjectLiteral,
   Program,
   Raw,
@@ -32,8 +35,8 @@ import {
   TokenNode,
   TupleLiteral,
   UnaryExpression,
+  UnexpectedToken,
 } from "./ast"
-import { ParserError } from "./errors"
 import type { TokenType } from "./lexer"
 import { Token, TOKEN_TYPES } from "./lexer"
 
@@ -41,9 +44,20 @@ import { Token, TOKEN_TYPES } from "./lexer"
  * Generate the Abstract Syntax Tree (AST) from a list of tokens.
  * Operator precedence can be found here: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_precedence#table
  */
-export function parse(tokens: Token[]): Program {
+export function parse(tokens: Token[]): Program
+export function parse(tokens: Token[], safe: false): Program
+export function parse(tokens: Token[], safe: true): [Program, ErrorNode[]]
+export function parse(
+  tokens: Token[],
+  safe = false
+): Program | [Program, ErrorNode[]] {
   const program = new Program([])
   let current = 0
+  const errors: ErrorNode[] = []
+
+  function createErrorToken() {
+    return new Token("error", "Error", 0, 0)
+  }
 
   /**
    * Consume the next token if it matches the expected type, otherwise throw an error.
@@ -51,27 +65,49 @@ export function parse(tokens: Token[]): Program {
    * @param error The error message to throw if the token does not match the expected type
    * @returns The consumed token
    */
-  function expect(type: string, error: string): Token {
+  function expect(type: string): Token {
+    if (current >= tokens.length) {
+      createMissingNode(type, tokens[tokens.length - 1])
+      return createErrorToken()
+    }
+
     const prev = tokens[current++]
     if (!prev || prev.type !== type) {
-      throw new ParserError(
-        `Parser Error: ${error}. ${prev.type} !== ${type}.`,
-        tokens[current - 1].start,
-        tokens[current - 1].end
-      )
+      createMissingNode(type, prev)
+      return createErrorToken()
     }
     return prev
   }
 
   function expectIdentifier(name: string): Token {
+    if (current >= tokens.length) {
+      createMissingNode(`'${name}'`, tokens[tokens.length - 1])
+      return createErrorToken()
+    }
+
     if (!isIdentifier(name)) {
-      throw new ParserError(
-        `Expected ${name}`,
-        tokens[current].start,
-        tokens[current].end
-      )
+      createMissingNode(name, tokens[current])
+      current++
+      return createErrorToken()
     }
     return tokens[current++]
+  }
+
+  function expectCloserStatement(result: Node, name: string) {
+    if (current >= tokens.length) {
+      createMissingNode(`'{% ${name} %}'`, tokens[tokens.length - 1])
+      return
+    }
+
+    result.addChild(
+      new TokenNode(expect(TOKEN_TYPES.OpenStatement)),
+      "closerOpenToken"
+    )
+    result.addChild(new TokenNode(expectIdentifier(name)), "closerIdentifier")
+    result.addChild(
+      new TokenNode(expect(TOKEN_TYPES.CloseStatement)),
+      "closerCloseToken"
+    )
   }
 
   function parseAny(): Statement {
@@ -85,11 +121,7 @@ export function parse(tokens: Token[]): Program {
       case TOKEN_TYPES.OpenExpression:
         return parseJinjaExpression()
       default:
-        throw new ParserError(
-          `Unexpected token type: ${tokens[current].type}`,
-          tokens[current].start,
-          tokens[current].end
-        )
+        return createMissingNode("statement", tokens[current++])
     }
   }
 
@@ -101,14 +133,6 @@ export function parse(tokens: Token[]): Program {
   }
 
   function isStatement(...names: string[]): boolean {
-    if (current >= tokens.length) {
-      throw new ParserError(
-        `Missing ${names.at(-1)} statement`,
-        tokens[tokens.length - 1].end,
-        tokens[tokens.length - 1].end
-      )
-    }
-
     return (
       tokens[current]?.type === TOKEN_TYPES.OpenStatement &&
       tokens[current + 1]?.type === TOKEN_TYPES.Identifier &&
@@ -127,26 +151,42 @@ export function parse(tokens: Token[]): Program {
     )
   }
 
+  function createMissingNode(missingType: string, before: Token) {
+    const node = new MissingNode(missingType, before)
+    errors.push(node)
+    return node
+  }
+
+  function createUnexpectedToken(message: string, before: Token) {
+    const unexpected = new UnexpectedToken(message, before)
+    errors.push(unexpected)
+    return unexpected
+  }
+
   function parseText(): StringLiteral {
-    const token = expect(TOKEN_TYPES.Text, "Expected text token")
+    const token = expect(TOKEN_TYPES.Text)
     return new StringLiteral(token.value, [new TokenNode(token)])
+  }
+
+  function eatUntil(type: string, includingEnd = true) {
+    while (tokens[current].type !== type) {
+      current++
+    }
+    if (includingEnd) {
+      current++
+    }
   }
 
   function parseJinjaStatement(): Statement {
     // Consume {% token
-    const openToken = expect(
-      TOKEN_TYPES.OpenStatement,
-      "Expected opening statement token"
-    )
+    const openToken = expect(TOKEN_TYPES.OpenStatement)
     let closeToken: Token | undefined = undefined
 
     // next token must be Identifier whose .value tells us which statement
     if (tokens[current].type !== TOKEN_TYPES.Identifier) {
-      throw new ParserError(
-        `Unknown statement, got ${tokens[current].type}`,
-        tokens[current].start,
-        tokens[current].end
-      )
+      const result = createMissingNode("statement name", tokens[current])
+      eatUntil(TOKEN_TYPES.CloseStatement)
+      return result
     }
     const identifier = tokens[current]
     const name = tokens[current].value
@@ -167,59 +207,22 @@ export function parse(tokens: Token[]): Program {
       case "if":
         ++current
         result = parseIfStatement()
-        // expect {% endif %}
-        result.addChild(
-          new TokenNode(expect(TOKEN_TYPES.OpenStatement, "Expected {% token")),
-          "closerOpenToken"
-        )
-        result.addChild(
-          new TokenNode(expectIdentifier("endif")),
-          "closerIdentifier"
-        )
-        result.addChild(
-          new TokenNode(
-            expect(TOKEN_TYPES.CloseStatement, "Expected %} token")
-          ),
-          "closerCloseToken"
-        )
+        expectCloserStatement(result, "endif")
         break
       case "macro":
         ++current
         result = parseMacroStatement()
-        // expect {% endmacro %}
-        result.addChild(
-          new TokenNode(expect(TOKEN_TYPES.OpenStatement, "Expected {% token")),
-          "closerOpenToken"
-        )
-        result.addChild(
-          new TokenNode(expectIdentifier("endmacro")),
-          "closerIdentifier"
-        )
-        result.addChild(
-          new TokenNode(
-            expect(TOKEN_TYPES.CloseStatement, "Expected %} token")
-          ),
-          "closerCloseToken"
-        )
+        if (result.type === "Macro") {
+          expectCloserStatement(result, "endmacro")
+        }
         break
       case "for":
         ++current
         result = parseForStatement()
-        // expect {% endfor %}
-        result.addChild(
-          new TokenNode(expect(TOKEN_TYPES.OpenStatement, "Expected {% token")),
-          "closerOpenToken"
-        )
-        result.addChild(
-          new TokenNode(expectIdentifier("endfor")),
-          "closerIdentifier"
-        )
-        result.addChild(
-          new TokenNode(
-            expect(TOKEN_TYPES.CloseStatement, "Expected %} token")
-          ),
-          "closerCloseToken"
-        )
+        if (result.type === "For") {
+          // expect {% endfor %}
+          expectCloserStatement(result, "endfor")
+        }
         break
       case "call": {
         ++current // consume 'call'
@@ -232,19 +235,17 @@ export function parse(tokens: Token[]): Program {
         const calleeStart = current
         const callee = parsePrimaryExpression()
         if (callee.type !== "Identifier") {
-          throw new ParserError(
-            `Expected identifier following call statement`,
-            tokens[calleeStart].start,
-            tokens[current - 1].end
+          const missingNode = createMissingNode(
+            "identifier",
+            tokens[calleeStart]
           )
+          eatUntil(TOKEN_TYPES.CloseStatement)
+          return missingNode
         }
         const [callOpenParen, callArgs, callCloseParen] = parseArgs()
-        closeToken = expect(
-          TOKEN_TYPES.CloseStatement,
-          "Expected closing statement token"
-        )
+        closeToken = expect(TOKEN_TYPES.CloseStatement)
         const body: Statement[] = []
-        while (!isStatement("endcall")) {
+        while (current < tokens.length && !isStatement("endcall")) {
           body.push(parseAny())
         }
         const callExpr = new CallExpression(
@@ -260,39 +261,17 @@ export function parse(tokens: Token[]): Program {
           createTokenNode(callerArgs?.[0]),
           createTokenNode(callerArgs?.[2])
         )
-        result.addChild(
-          new TokenNode(expect(TOKEN_TYPES.OpenStatement, "Expected '{%'")),
-          "closerOpenToken"
-        )
-        result.addChild(
-          new TokenNode(expectIdentifier("endcall")),
-          "closerIdentifier"
-        )
-        result.addChild(
-          new TokenNode(
-            expect(
-              TOKEN_TYPES.CloseStatement,
-              "Expected closing statement token"
-            )
-          ),
-          "closerCloseToken"
-        )
+        expectCloserStatement(result, "endcall")
         break
       }
       case "break":
         ++current
-        closeToken = expect(
-          TOKEN_TYPES.CloseStatement,
-          "Expected closing statement token"
-        )
+        closeToken = expect(TOKEN_TYPES.CloseStatement)
         result = new Break()
         break
       case "continue":
         ++current
-        closeToken = expect(
-          TOKEN_TYPES.CloseStatement,
-          "Expected closing statement token"
-        )
+        closeToken = expect(TOKEN_TYPES.CloseStatement)
         result = new Continue()
         break
       case "filter": {
@@ -301,12 +280,9 @@ export function parse(tokens: Token[]): Program {
         if (filterNode instanceof Identifier && is(TOKEN_TYPES.OpenParen)) {
           filterNode = parseCallExpression(filterNode)
         }
-        closeToken = expect(
-          TOKEN_TYPES.CloseStatement,
-          "Expected closing statement token"
-        )
+        closeToken = expect(TOKEN_TYPES.CloseStatement)
         const filterBody: Statement[] = []
-        while (!isStatement("endfilter")) {
+        while (current < tokens.length && !isStatement("endfilter")) {
           filterBody.push(parseAny())
         }
         result = new FilterStatement(
@@ -314,26 +290,15 @@ export function parse(tokens: Token[]): Program {
           filterBody
         )
 
-        result.addChild(
-          new TokenNode(expect(TOKEN_TYPES.OpenStatement, "Expected '{%'")),
-          "closerOpenToken"
-        )
-        result.addChild(
-          new TokenNode(expectIdentifier("endfilter")),
-          "closerIdentifier"
-        )
-        result.addChild(
-          new TokenNode(expect(TOKEN_TYPES.CloseStatement, "Expected '%}'")),
-          "closerCloseToken"
-        )
+        expectCloserStatement(result, "endfilter")
         break
       }
       default:
-        throw new ParserError(
-          `Unknown statement type: ${name}`,
-          tokens[current].start,
-          tokens[current].end
-        )
+        result = createUnexpectedToken(`statement '${name}'`, tokens[current])
+        current--
+        eatUntil(TOKEN_TYPES.CloseStatement, false)
+        result.addChild(new TokenNode(tokens[current++]), "closeToken")
+        break
     }
     result.addChild(new TokenNode(openToken), "openToken")
     result.addChild(new TokenNode(identifier), "identifier")
@@ -346,37 +311,30 @@ export function parse(tokens: Token[]): Program {
 
   function parseJinjaExpression(): Statement {
     // Consume {{ }} tokens
-    const openToken = expect(
-      TOKEN_TYPES.OpenExpression,
-      "Expected opening expression token"
-    )
+    const openToken = expect(TOKEN_TYPES.OpenExpression)
 
     const result = parseExpression()
     result.addChild(new TokenNode(openToken), "openToken")
 
     result.addChild(
-      new TokenNode(
-        expect(TOKEN_TYPES.CloseExpression, "Expected closing expression token")
-      ),
+      new TokenNode(expect(TOKEN_TYPES.CloseExpression)),
       "closeToken"
     )
 
     return result
   }
 
-  function parseIncludeStatement(): Include {
+  function parseIncludeStatement(): Include | MissingNode {
     const nameStart = current
     const name = parsePrimaryExpression()
     if (name.type !== "StringLiteral") {
-      throw new ParserError(
-        `Expected string literal following include statement`,
-        tokens[nameStart].start,
-        tokens[current - 1].end
-      )
+      const result = createMissingNode("string literal", tokens[nameStart])
+      eatUntil(TOKEN_TYPES.CloseStatement)
+      return result
     }
     const result = new Include(name as StringLiteral)
     result.addChild(
-      new TokenNode(expect(TOKEN_TYPES.CloseStatement, "Expected %} token")),
+      new TokenNode(expect(TOKEN_TYPES.CloseStatement)),
       "closeToken"
     )
     return result
@@ -384,21 +342,13 @@ export function parse(tokens: Token[]): Program {
 
   function parseRawStatement(): Raw {
     const body: Statement[] = []
-    const closeToken = expect(TOKEN_TYPES.CloseStatement, "Expected %} token")
-    while (!isStatement("endraw")) {
+    const closeToken = expect(TOKEN_TYPES.CloseStatement)
+    while (current < tokens.length && !isStatement("endraw")) {
       current++
     }
     const raw = new Raw(body)
     raw.addChild(new TokenNode(closeToken), "closeToken")
-    raw.addChild(
-      new TokenNode(expect(TOKEN_TYPES.OpenStatement, "Expected {% token")),
-      "closerOpenToken"
-    )
-    raw.addChild(new TokenNode(expectIdentifier("endraw")), "closerIdentifier")
-    raw.addChild(
-      new TokenNode(expect(TOKEN_TYPES.CloseStatement, "Expected %} token")),
-      "closerCloseToken"
-    )
+    expectCloserStatement(raw, "endraw")
     return raw
   }
 
@@ -417,11 +367,11 @@ export function parse(tokens: Token[]): Program {
       value = parseExpressionSequence()
     } else {
       // parsing multiline set here
-      closeToken = expect(TOKEN_TYPES.CloseStatement, "Expected %} token")
-      while (!isStatement("endset")) {
+      closeToken = expect(TOKEN_TYPES.CloseStatement)
+      while (current < tokens.length && !isStatement("endset")) {
         body.push(parseAny())
       }
-      closerOpenToken = expect(TOKEN_TYPES.OpenStatement, "Expected {% token")
+      closerOpenToken = expect(TOKEN_TYPES.OpenStatement)
       closerIdentifier = expectIdentifier("endset")
     }
     const result = new SetStatement(
@@ -435,16 +385,12 @@ export function parse(tokens: Token[]): Program {
       result.addChild(new TokenNode(closerOpenToken!), "closerOpenToken")
       result.addChild(new TokenNode(closerIdentifier!), "closerIdentifier")
       result.addChild(
-        new TokenNode(
-          expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
-        ),
+        new TokenNode(expect(TOKEN_TYPES.CloseStatement)),
         "closerCloseToken"
       )
     } else {
       result.addChild(
-        new TokenNode(
-          expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
-        ),
+        new TokenNode(expect(TOKEN_TYPES.CloseStatement)),
         "closeToken"
       )
     }
@@ -455,9 +401,7 @@ export function parse(tokens: Token[]): Program {
     const test = parseExpression()
 
     test.addChild(
-      new TokenNode(
-        expect(TOKEN_TYPES.CloseStatement, "Expected closing statement token")
-      ),
+      new TokenNode(expect(TOKEN_TYPES.CloseStatement)),
       "closeToken"
     )
 
@@ -465,7 +409,7 @@ export function parse(tokens: Token[]): Program {
     const alternate: Statement[] = []
 
     // Keep parsing 'if' body until we reach the first {% elif %} or {% else %} or {% endif %}
-    while (!isStatement("elif", "else", "endif")) {
+    while (current < tokens.length && !isStatement("elif", "else", "endif")) {
       body.push(parseAny())
     }
 
@@ -489,13 +433,10 @@ export function parse(tokens: Token[]): Program {
       ++current // consume {%
       elseIdentifier = tokens[current]
       ++current // consume 'else'
-      elseCloseToken = expect(
-        TOKEN_TYPES.CloseStatement,
-        "Expected closing statement token"
-      )
+      elseCloseToken = expect(TOKEN_TYPES.CloseStatement)
 
       // keep going until we hit {% endif %}
-      while (!isStatement("endif")) {
+      while (current < tokens.length && !isStatement("endif")) {
         alternate.push(parseAny())
       }
     }
@@ -510,27 +451,22 @@ export function parse(tokens: Token[]): Program {
     )
   }
 
-  function parseMacroStatement(): Macro {
+  function parseMacroStatement(): Macro | MissingNode {
     const nameStart = current
     const name = parsePrimaryExpression()
     if (name.type !== "Identifier") {
-      throw new ParserError(
-        `Expected identifier following macro statement`,
-        tokens[nameStart].start,
-        tokens[current - 1].end
-      )
+      const result = createMissingNode("macro name", tokens[nameStart])
+      eatUntil(TOKEN_TYPES.CloseStatement)
+      return result
     }
     const [argsOpenParen, args, argsCloseParen] = parseArgs()
-    const closeToken = expect(
-      TOKEN_TYPES.CloseStatement,
-      "Expected closing statement token"
-    )
+    const closeToken = expect(TOKEN_TYPES.CloseStatement)
 
     // Body of macro
     const body: Statement[] = []
 
     // Keep going until we hit {% endmacro
-    while (!isStatement("endmacro")) {
+    while (current < tokens.length && !isStatement("endmacro")) {
       body.push(parseAny())
     }
 
@@ -559,7 +495,7 @@ export function parse(tokens: Token[]): Program {
     return isTuple ? new TupleLiteral(expressions) : expressions[0]
   }
 
-  function parseForStatement(): For {
+  function parseForStatement(): For | MissingNode {
     // e.g., `message` in `for message in messages`
     const loopVariableStart = current
     const loopVariable = parseExpressionSequence(true) // should be an identifier/tuple
@@ -569,35 +505,31 @@ export function parse(tokens: Token[]): Program {
         loopVariable instanceof TupleLiteral
       )
     ) {
-      throw new ParserError(
-        `Expected identifier/tuple for the loop variable, got ${loopVariable.type} instead`,
-        tokens[loopVariableStart].start,
-        tokens[current - 1].end
+      const missingNode = createMissingNode(
+        "identifier/tuple for the loop variable",
+        tokens[loopVariableStart]
       )
+      eatUntil(TOKEN_TYPES.CloseStatement)
+      return missingNode
     }
 
+    let inToken: Token | undefined = undefined
     if (!isIdentifier("in")) {
-      throw new ParserError(
-        "Expected `in` keyword following loop variable",
-        tokens[current].start,
-        tokens[current].end
-      )
+      createMissingNode("`in` keyword following loop variable", tokens[current])
+    } else {
+      inToken = tokens[current++]
     }
-    const inToken = tokens[current++]
 
     // `messages` in `for message in messages`
     const iterable = parseExpression()
 
-    const closeToken = expect(
-      TOKEN_TYPES.CloseStatement,
-      "Expected closing statement token"
-    )
+    const closeToken = expect(TOKEN_TYPES.CloseStatement)
 
     // Body of for loop
     const body: Statement[] = []
 
     // Keep going until we hit {% endfor or {% else
-    while (!isStatement("else", "endfor")) {
+    while (current < tokens.length && !isStatement("else", "endfor")) {
       body.push(parseAny())
     }
 
@@ -609,11 +541,8 @@ export function parse(tokens: Token[]): Program {
     if (isStatement("else")) {
       elseOpenToken = tokens[current++] // consume {%
       elseIdentifier = tokens[current++] // consume 'else'
-      elseCloseToken = expect(
-        TOKEN_TYPES.CloseStatement,
-        "Expected closing statement token"
-      )
-      while (!isStatement("endfor")) {
+      elseCloseToken = expect(TOKEN_TYPES.CloseStatement)
+      while (current < tokens.length && !isStatement("endfor")) {
         alternative.push(parseAny())
       }
     }
@@ -623,7 +552,7 @@ export function parse(tokens: Token[]): Program {
       iterable,
       body,
       alternative,
-      new TokenNode(inToken),
+      createTokenNode(inToken),
       createTokenNode(elseOpenToken),
       createTokenNode(elseIdentifier),
       createTokenNode(elseCloseToken)
@@ -770,17 +699,11 @@ export function parse(tokens: Token[]): Program {
 
   function parseArgs(): [Token, Statement[], Token] {
     // add (x + 5, foo())
-    const openToken = expect(
-      TOKEN_TYPES.OpenParen,
-      "Expected opening parenthesis for arguments list"
-    )
+    const openToken = expect(TOKEN_TYPES.OpenParen)
 
     const args = parseArgumentsList()
 
-    const closeToken = expect(
-      TOKEN_TYPES.CloseParen,
-      "Expected closing parenthesis for arguments list"
-    )
+    const closeToken = expect(TOKEN_TYPES.CloseParen)
     return [openToken, args, closeToken]
   }
   function parseArgumentsList(): Statement[] {
@@ -806,11 +729,12 @@ export function parse(tokens: Token[]): Program {
           // e.g., func(x = 5, y = a or b)
           const equalsToken = tokens[current++] // consume equals
           if (!(argument instanceof Identifier)) {
-            throw new ParserError(
-              `Expected identifier for keyword argument`,
-              tokens[argumentStart].start,
-              tokens[current - 1].end
+            createMissingNode(
+              "identifier for keyword argument",
+              tokens[argumentStart]
             )
+            eatUntil(TOKEN_TYPES.CloseParen, false)
+            break
           }
           const value = parseExpression()
           argument = new KeywordArgumentExpression(
@@ -852,19 +776,17 @@ export function parse(tokens: Token[]): Program {
     }
     if (slices.length === 0) {
       // []
-      throw new ParserError(
-        `Expected at least one argument for member/slice expression`,
-        tokens[startToken].start,
-        tokens[current].end
+      return createMissingNode(
+        "at least one argument for member/slice expression",
+        tokens[current]
       )
     }
 
     if (isSlice) {
       if (slices.length > 3) {
-        throw new ParserError(
-          `Expected 0-3 arguments for slice expression`,
-          tokens[startToken].start,
-          tokens[current].end
+        return createMissingNode(
+          "at most three argument for slice expression",
+          tokens[current]
         )
       }
       return new SliceExpression(...slices)
@@ -882,19 +804,15 @@ export function parse(tokens: Token[]): Program {
       if (computed) {
         // computed (i.e., bracket notation: obj[expr])
         property = parseMemberExpressionArgumentsList()
-        expect(
-          TOKEN_TYPES.CloseSquareBracket,
-          "Expected closing square bracket"
-        )
+        expect(TOKEN_TYPES.CloseSquareBracket)
       } else {
         // non-computed (i.e., dot notation: obj.expr)
         const propertyStart = current
         property = parsePrimaryExpression() // should be an identifier
         if (property.type !== "Identifier") {
-          throw new ParserError(
-            `Expected identifier following dot operator`,
-            tokens[propertyStart].start,
-            tokens[current - 1].end
+          return createMissingNode(
+            "identifier for member expression",
+            tokens[propertyStart]
           )
         }
       }
@@ -930,19 +848,16 @@ export function parse(tokens: Token[]): Program {
       }
 
       const filterStart = current
-      const filter = parsePrimaryExpression()
+      let filter = parsePrimaryExpression()
       if (!(filter instanceof Identifier)) {
-        throw new ParserError(
-          `Expected identifier for the test`,
-          tokens[filterStart].start,
-          tokens[current - 1].end
-        )
+        createMissingNode("identifier for the test", tokens[current - 1])
+        filter = new Identifier("error", new TokenNode(tokens[current]))
       }
       // TODO: Add support for non-identifier tests
       operand = new TestExpression(
         operand,
         negate,
-        filter,
+        filter as Identifier,
         new TokenNode(isToken),
         createTokenNode(notToken)
       )
@@ -959,11 +874,8 @@ export function parse(tokens: Token[]): Program {
       const filterStart = current
       let filter = parsePrimaryExpression() // should be an identifier
       if (!(filter instanceof Identifier)) {
-        throw new ParserError(
-          `Expected identifier for the filter`,
-          tokens[filterStart].start,
-          tokens[current - 1].end
-        )
+        createMissingNode("identifier for the filter", tokens[current - 1])
+        filter = new Identifier("error", new TokenNode(tokens[current]))
       }
       if (is(TOKEN_TYPES.OpenParen)) {
         filter = parseCallExpression(filter)
@@ -1000,10 +912,7 @@ export function parse(tokens: Token[]): Program {
         return new Identifier(token.value, new TokenNode(token))
       case TOKEN_TYPES.OpenParen: {
         const expression = parseExpressionSequence()
-        expect(
-          TOKEN_TYPES.CloseParen,
-          "Expected closing parenthesis, got ${tokens[current].type} instead."
-        )
+        expect(TOKEN_TYPES.CloseParen)
         return expression
       }
       case TOKEN_TYPES.OpenSquareBracket: {
@@ -1027,10 +936,7 @@ export function parse(tokens: Token[]): Program {
         const values = new Map()
         while (!is(TOKEN_TYPES.CloseCurlyBracket)) {
           const key = parseExpression()
-          expect(
-            TOKEN_TYPES.Colon,
-            "Expected colon between key and value in object literal"
-          )
+          expect(TOKEN_TYPES.Colon)
           const value = parseExpression()
           values.set(key, value)
 
@@ -1047,11 +953,8 @@ export function parse(tokens: Token[]): Program {
         )
       }
       default:
-        throw new ParserError(
-          `Unexpected token: ${token.type}`,
-          token.start,
-          token.end
-        )
+        current--
+        return createMissingNode("expression", token)
     }
   }
 
@@ -1061,5 +964,12 @@ export function parse(tokens: Token[]): Program {
     program.addChild(node)
   }
 
-  return program
+  if (!safe) {
+    if (errors.length !== 0) {
+      throw new Error("Parsing failed")
+    }
+    return program
+  }
+
+  return [program, errors]
 }

@@ -31,6 +31,8 @@ export const TOKEN_TYPES = Object.freeze({
   ComparisonBinaryOperator: "ComparisonBinaryOperator", // < > <= >= == !=
   UnaryOperator: "UnaryOperator", // ! - +
   Comment: "Comment", // {# ... #}
+
+  Error: "Error",
 })
 
 export type TokenType = keyof typeof TOKEN_TYPES

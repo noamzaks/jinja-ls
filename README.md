@@ -22,10 +22,11 @@
 
 - [x] Provide diagnostics
 - [x] Provide semantic highlighting
+- [x] Make parser more error tolerant
 - [ ] Provide hover
+  - [x] for built-in tests/filters/global functions
 - [ ] Provide signature help
 - [ ] Provide go to definition
 - [ ] Provide document symbols
 - [ ] Support embedded code languages in Markdown (hover, signature help, semantic highlighting, diagnostics)
-- [ ] Make parser more error tolerant
 - [ ] Rewrite language server in Rust (with incremental compilation? based on comemo?)

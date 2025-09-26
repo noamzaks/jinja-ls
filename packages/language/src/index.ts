@@ -30,7 +30,7 @@ export class Template {
       lstrip_blocks: true,
       trim_blocks: true,
     })
-    this.parsed = parse(tokens)
+    this.parsed = parse(tokens, false)
   }
 
   render(items?: Record<string, unknown>): string {

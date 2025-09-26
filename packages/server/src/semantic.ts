@@ -75,12 +75,14 @@ export const getTokens = (statements: ast.Statement[]) => {
           ...forStatement.body,
           ...forStatement.defaultBlock
         )
-        items.push({
-          start: forStatement.inToken.start,
-          end: forStatement.inToken.end,
-          tokenType: 8,
-          tokenModifiers: 0,
-        })
+        if (forStatement.inToken !== undefined) {
+          items.push({
+            start: forStatement.inToken.start,
+            end: forStatement.inToken.end,
+            tokenType: 8,
+            tokenModifiers: 0,
+          })
+        }
         break
       case "Break":
         const breakStatement = statement as ast.Break

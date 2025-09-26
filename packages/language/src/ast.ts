@@ -79,6 +79,26 @@ export class Statement extends Node {
   }
 }
 
+export class ErrorNode extends Statement {
+  override type = "ErrorNode"
+}
+
+export class MissingNode extends ErrorNode {
+  override type = "MissingNode"
+
+  constructor(public missingType: string, public before: Token) {
+    super()
+  }
+}
+
+export class UnexpectedToken extends ErrorNode {
+  override type = "UnexpectedToken"
+
+  constructor(public message: string, public token: Token) {
+    super()
+  }
+}
+
 /**
  * Defines a block which contains many statements. Each chat template corresponds to one Program.
  */
@@ -126,7 +146,7 @@ export class For extends Statement {
     public iterable: Expression,
     public body: Statement[],
     public defaultBlock: Statement[], // if no iteration took place
-    public inToken: TokenNode,
+    public inToken: TokenNode | undefined = undefined,
     public elseOpenToken: TokenNode | undefined = undefined,
     public elseIdentifier: TokenNode | undefined = undefined,
     public elseCloseToken: TokenNode | undefined = undefined
