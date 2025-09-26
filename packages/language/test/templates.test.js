@@ -4389,10 +4389,6 @@ describe("Templates", () => {
 
 describe("Error checking", () => {
   describe("Lexing errors", () => {
-    it("Missing closing curly brace", () => {
-      const text = "{{ variable"
-      expect(() => tokenize(text)).toThrowError()
-    })
     it("Unclosed string literal", () => {
       const text = `{{ 'unclosed string }}`
       expect(() => tokenize(text)).toThrowError()

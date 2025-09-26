@@ -34,7 +34,7 @@ const OPEN_STATEMENT = "{%- "
 const CLOSE_STATEMENT = " -%}"
 
 function getBinaryOperatorPrecedence(expr: BinaryExpression): number {
-  switch (expr.operator.type) {
+  switch (expr.operator.token.type) {
     case "MultiplicativeBinaryOperator":
       return 4
     case "AdditiveBinaryOperator":
@@ -52,7 +52,7 @@ function getBinaryOperatorPrecedence(expr: BinaryExpression): number {
 
 export function format(
   program: Program,
-  indent: string | number = "\t",
+  indent: string | number = "\t"
 ): string {
   const indentStr = typeof indent === "number" ? " ".repeat(indent) : indent
   const body = formatStatements(program.body, 0, indentStr)
@@ -66,7 +66,7 @@ function createStatement(...text: string[]): string {
 function formatStatements(
   stmts: Statement[],
   depth: number,
-  indentStr: string,
+  indentStr: string
 ): string {
   return stmts
     .map((stmt) => formatStatement(stmt, depth, indentStr))
@@ -76,7 +76,7 @@ function formatStatements(
 function formatStatement(
   node: Statement,
   depth: number,
-  indentStr: string,
+  indentStr: string
 ): string {
   const pad = indentStr.repeat(depth)
   switch (node.type) {
@@ -158,7 +158,7 @@ function formatFor(node: For, depth: number, indentStr: string): string {
     // Handle special case: e.g., `for x in [1, 2, 3] if x > 2`
     const n = node.iterable as SelectExpression
     formattedIterable = `${formatExpression(n.lhs)} if ${formatExpression(
-      n.test,
+      n.test
     )}`
   } else {
     formattedIterable = formatExpression(node.iterable)
@@ -169,7 +169,7 @@ function formatFor(node: For, depth: number, indentStr: string): string {
       "for",
       formatExpression(node.loopvar),
       "in",
-      formattedIterable,
+      formattedIterable
     ) +
     NEWLINE +
     formatStatements(node.body, depth + 1, indentStr)
@@ -190,7 +190,7 @@ function formatFor(node: For, depth: number, indentStr: string): string {
 function formatSet(
   node: SetStatement,
   depth: number,
-  indentStr: string,
+  indentStr: string
 ): string {
   const pad = indentStr.repeat(depth)
   const left = formatExpression(node.assignee)
@@ -228,7 +228,7 @@ function formatMacro(node: Macro, depth: number, indentStr: string): string {
 function formatCallStatement(
   node: CallStatement,
   depth: number,
-  indentStr: string,
+  indentStr: string
 ): string {
   const pad = indentStr.repeat(depth)
   const params =
@@ -245,7 +245,7 @@ function formatCallStatement(
 function formatFilterStatement(
   node: FilterStatement,
   depth: number,
-  indentStr: string,
+  indentStr: string
 ): string {
   const pad = indentStr.repeat(depth)
   const spec =
@@ -346,7 +346,7 @@ function formatExpression(node: Expression, parentPrec: number = -1): string {
     }
     case "ObjectLiteral": {
       const entries = Array.from((node as ObjectLiteral).value.entries()).map(
-        ([k, v]) => `${formatExpression(k)}: ${formatExpression(v)}`,
+        ([k, v]) => `${formatExpression(k)}: ${formatExpression(v)}`
       )
       return `{${entries.join(", ")}}`
     }
@@ -365,7 +365,7 @@ function formatExpression(node: Expression, parentPrec: number = -1): string {
       const n = node as Ternary
       const expr = `${formatExpression(n.trueExpr)} if ${formatExpression(
         n.condition,
-        0,
+        0
       )} else ${formatExpression(n.falseExpr)}`
       return parentPrec > -1 ? `(${expr})` : expr
     }
