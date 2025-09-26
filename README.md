@@ -22,11 +22,16 @@
 
 - [x] Provide diagnostics
 - [x] Provide semantic highlighting
-- [x] Make parser more error tolerant
+- [x] Make lexer and parser more error tolerant
 - [ ] Provide hover
   - [x] for built-in tests/filters/global functions
+  - [ ] for user-defined functions in scope
+- [ ] Track types of
 - [ ] Provide signature help
 - [ ] Provide go to definition
 - [ ] Provide document symbols
+- [ ] Provide auto-complete
+- [ ] Provide an API for other extensions to specify the globals
 - [ ] Support embedded code languages in Markdown (hover, signature help, semantic highlighting, diagnostics)
-- [ ] Rewrite language server in Rust (with incremental compilation? based on comemo?)
+- [ ] Make lexer/parser more performant (incremental)
+- [ ] Rewrite in rust

@@ -12,8 +12,8 @@ const documentASTs: Map<
   string,
   {
     program?: ast.Program
-    errors?: ast.ErrorNode[]
-    error?: LexerError
+    lexerErrors?: LexerError[]
+    parserErrors?: ast.ErrorNode[]
   }
 > = new Map()
 
@@ -46,35 +46,22 @@ documents.onDidChangeContent((event) => {
 
 const getDocumentAST = (contents: string) => {
   try {
-    const tokens = tokenize(contents)
-    const [program, errors] = parse(tokens, true)
-    return { program, errors }
+    const [tokens, lexerErrors] = tokenize(contents, {}, true)
+    const [program, parserErrors] = parse(tokens, true)
+    return { program, lexerErrors, parserErrors }
   } catch (e) {
-    if (e instanceof LexerError) {
-      return { error: e }
-    }
+    console.log(e)
   }
   return {}
 }
 
 connection.languages.diagnostics.on(async (params) => {
   const ast = documentASTs.get(params.textDocument.uri)
-  const errors = ast?.errors
-  const error = ast?.error
+
   const items: lsp.Diagnostic[] = []
   const document = documents.get(params.textDocument.uri)
   if (document !== undefined) {
-    if (error) {
-      items.push({
-        message: error.message,
-        range: lsp.Range.create(
-          document.positionAt(error.start),
-          document.positionAt(error.end)
-        ),
-        severity: lsp.DiagnosticSeverity.Error,
-      })
-    }
-    for (const e of errors ?? []) {
+    for (const e of ast?.parserErrors ?? []) {
       if (e.type === "MissingNode") {
         const missingNode = e as ast.MissingNode
         const position = document.positionAt(missingNode.before.start)
@@ -94,6 +81,17 @@ connection.languages.diagnostics.on(async (params) => {
           severity: lsp.DiagnosticSeverity.Error,
         })
       }
+    }
+
+    for (const e of ast?.lexerErrors ?? []) {
+      items.push({
+        message: e.message,
+        range: lsp.Range.create(
+          document.positionAt(e.start),
+          document.positionAt(e.end)
+        ),
+        severity: lsp.DiagnosticSeverity.Error,
+      })
     }
   }
 
