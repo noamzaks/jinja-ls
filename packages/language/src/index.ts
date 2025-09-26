@@ -12,9 +12,8 @@
  */
 import type { Program } from "./ast"
 import * as ast from "./ast"
-import { LexerError } from "./errors"
 import { format } from "./format"
-import { tokenize } from "./lexer"
+import { LexerError, tokenize } from "./lexer"
 import { parse } from "./parser"
 import type { StringValue } from "./runtime"
 import { Environment, Interpreter, setupGlobals } from "./runtime"

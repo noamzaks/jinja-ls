@@ -891,8 +891,8 @@ export function parse(
 
   function parsePrimaryExpression(): Statement {
     // Primary expression: number, string, identifier, function call, parenthesized expression
-    const token = tokens[current++]
-    switch (token.type) {
+    const token = current >= tokens.length ? undefined : tokens[current++]
+    switch (token?.type) {
       case TOKEN_TYPES.NumericLiteral: {
         const num = token.value
         return num.includes(".")
@@ -954,7 +954,10 @@ export function parse(
       }
       default:
         current--
-        return createMissingNode("expression", token)
+        return createMissingNode(
+          "expression",
+          token ?? tokens[tokens.length - 1]
+        )
     }
   }
 
@@ -966,7 +969,7 @@ export function parse(
 
   if (!safe) {
     if (errors.length !== 0) {
-      throw new Error("Parsing failed")
+      throw new SyntaxError("Parsing failed")
     }
     return program
   }

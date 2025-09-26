@@ -1,5 +1,3 @@
-import { LexerError } from "./errors"
-
 /**
  * Represents tokens that our language understands in parsing.
  */
@@ -51,6 +49,14 @@ export class Token {
   constructor(
     public value: string,
     public type: TokenType,
+    public start: number,
+    public end: number
+  ) {}
+}
+
+export class LexerError {
+  constructor(
+    public message: string,
     public start: number,
     public end: number
   ) {}
@@ -130,11 +136,25 @@ export interface PreprocessOptions {
 /**
  * Generate a list of tokens from a source string.
  */
+export function tokenize(source: string): Token[]
+export function tokenize(source: string, options: PreprocessOptions): Token[]
 export function tokenize(
   source: string,
-  options: PreprocessOptions = {}
-): Token[] {
+  options: PreprocessOptions,
+  safe: false
+): Token[]
+export function tokenize(
+  source: string,
+  options: PreprocessOptions,
+  safe: true
+): [Token[], LexerError[]]
+export function tokenize(
+  source: string,
+  options: PreprocessOptions = {},
+  safe = false
+): Token[] | [Token[], LexerError[]] {
   const tokens: Token[] = []
+  const errors: LexerError[] = []
 
   let cursorPosition = 0
   let previousCursorPosition = 0
@@ -155,7 +175,10 @@ export function tokenize(
     return result
   }
 
-  const consumeWhile = (predicate: (char: string) => boolean): string => {
+  const consumeWhile = (
+    predicate: (char: string) => boolean,
+    label?: string
+  ): string => {
     let str = ""
     while (predicate(source[cursorPosition])) {
       // Check for escaped characters
@@ -163,34 +186,41 @@ export function tokenize(
         // Consume the backslash
         ++cursorPosition
         // Check for end of input
-        if (cursorPosition >= source.length)
-          throw new LexerError(
-            "Unexpected end of input",
-            cursorPosition - 1,
-            source.length
+        if (cursorPosition >= source.length) {
+          errors.push(
+            new LexerError(
+              "Missing escaped character",
+              cursorPosition - 1,
+              source.length
+            )
           )
+          return str
+        }
 
         // Add the escaped character
         const escaped = source[cursorPosition++]
         const unescaped = ESCAPE_CHARACTERS.get(escaped)
         if (unescaped === undefined) {
-          throw new LexerError(
-            `Unexpected escaped character: ${escaped}`,
-            cursorPosition - 2,
-            cursorPosition
+          errors.push(
+            new LexerError(
+              `Invalid escaped character: ${escaped}`,
+              cursorPosition - 2,
+              cursorPosition
+            )
           )
+          return str
         }
         str += unescaped
         continue
       }
 
       str += source[cursorPosition++]
-      if (cursorPosition >= source.length)
-        throw new LexerError(
-          "Unexpected end of input",
-          cursorPosition - 1,
-          source.length
-        )
+      if (cursorPosition >= source.length) {
+        if (label) {
+          errors.push(new LexerError(label, cursorPosition - 1, source.length))
+        }
+        return str
+      }
     }
     return str
   }
@@ -262,10 +292,12 @@ export function tokenize(
       ) {
         // Check for end of input
         if (cursorPosition + 2 >= source.length) {
-          throw new LexerError(
-            "Missing end of comment tag",
-            source.length,
-            source.length
+          errors.push(
+            new LexerError(
+              "Missing end of comment tag",
+              source.length,
+              source.length
+            )
           )
         }
         comment += source[cursorPosition++]
@@ -283,6 +315,9 @@ export function tokenize(
 
     // Consume (and ignore) all whitespace inside Jinja statements or expressions
     consumeWhile((char) => /\s/.test(char))
+    if (cursorPosition >= source.length) {
+      continue
+    }
 
     // Handle multi-character tokens
     const char = source[cursorPosition]
@@ -291,11 +326,15 @@ export function tokenize(
     if (char === "-" || char === "+") {
       const lastTokenType = tokens.at(-1)?.type
       if (lastTokenType === TOKEN_TYPES.Text || lastTokenType === undefined) {
-        throw new LexerError(
-          `Unexpected character: ${char}`,
-          cursorPosition,
-          cursorPosition
+        errors.push(
+          new LexerError(
+            `Unexpected character: ${char}`,
+            cursorPosition,
+            cursorPosition
+          )
         )
+        cursorPosition++
+        continue
       }
       switch (lastTokenType) {
         case TOKEN_TYPES.Identifier:
@@ -361,7 +400,7 @@ export function tokenize(
 
     if (char === "'" || char === '"') {
       ++cursorPosition // Skip the opening quote
-      const str = consumeWhile((c) => c !== char)
+      const str = consumeWhile((c) => c !== char, "unterminated string literal")
       ++cursorPosition // Skip the closing quote
       tokens.push(createToken(str, TOKEN_TYPES.StringLiteral))
       continue
@@ -389,11 +428,22 @@ export function tokenize(
       continue
     }
 
-    throw new LexerError(
-      `Unexpected character: ${char}`,
-      cursorPosition,
-      cursorPosition
+    errors.push(
+      new LexerError(
+        `Unexpected character: ${char}`,
+        cursorPosition,
+        cursorPosition
+      )
     )
+    cursorPosition++
   }
-  return tokens
+
+  if (!safe) {
+    if (errors.length !== 0) {
+      throw new SyntaxError("Lexing failed")
+    }
+    return tokens
+  }
+
+  return [tokens, errors]
 }
