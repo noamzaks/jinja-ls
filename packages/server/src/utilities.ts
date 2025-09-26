@@ -1,4 +1,4 @@
-import { ast } from "@jinja-lsp/language"
+import { ast } from "@jinja-ls/language"
 
 export const walk = (
   program: ast.Program,

@@ -26,7 +26,7 @@ export const activate = (context: vscode.ExtensionContext) => {
   }
 
   client = new lsp.LanguageClient(
-    "jinja-lsp",
+    "jinja-ls",
     "Jinja Language Server",
     serverOptions,
     clientOptions

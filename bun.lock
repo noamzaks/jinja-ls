@@ -2,14 +2,14 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "jinja-lsp-new",
+      "name": "jinja-ls",
       "devDependencies": {
         "@types/node": "^24.5.2",
         "typescript": "^5.9.2",
       },
     },
     "packages/client": {
-      "name": "@jinja-lsp/client",
+      "name": "@jinja-ls/client",
       "dependencies": {
         "vscode-languageclient": "^9.0.1",
       },
@@ -18,15 +18,15 @@
       },
     },
     "packages/language": {
-      "name": "@jinja-lsp/language",
+      "name": "@jinja-ls/language",
       "devDependencies": {
         "vitest": "^3.2.4",
       },
     },
     "packages/server": {
-      "name": "@jinja-lsp/server",
+      "name": "@jinja-ls/server",
       "dependencies": {
-        "@jinja-lsp/language": "workspace:*",
+        "@jinja-ls/language": "workspace:*",
         "vscode-languageserver": "^9.0.1",
         "vscode-languageserver-textdocument": "^1.0.12",
       },
@@ -85,11 +85,11 @@
 
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.25.10", "", { "os": "win32", "cpu": "x64" }, "sha512-9KpxSVFCu0iK1owoez6aC/s/EdUQLDN3adTxGCqxMVhrPDj6bt5dbrHDXUuq+Bs2vATFBBrQS5vdQ/Ed2P+nbw=="],
 
-    "@jinja-lsp/client": ["@jinja-lsp/client@workspace:packages/client"],
+    "@jinja-ls/client": ["@jinja-ls/client@workspace:packages/client"],
 
-    "@jinja-lsp/language": ["@jinja-lsp/language@workspace:packages/language"],
+    "@jinja-ls/language": ["@jinja-ls/language@workspace:packages/language"],
 
-    "@jinja-lsp/server": ["@jinja-lsp/server@workspace:packages/server"],
+    "@jinja-ls/server": ["@jinja-ls/server@workspace:packages/server"],
 
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 

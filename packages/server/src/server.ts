@@ -1,4 +1,4 @@
-import { ast, LexerError, parse, tokenize } from "@jinja-lsp/language"
+import { ast, LexerError, parse, tokenize } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { createConnection } from "vscode-languageserver/node"

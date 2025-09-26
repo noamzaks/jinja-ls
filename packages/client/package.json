@@ -1,5 +1,5 @@
 {
-  "name": "@jinja-lsp/client",
+  "name": "@jinja-ls/client",
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
   },

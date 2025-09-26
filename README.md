@@ -1,5 +1,5 @@
 <h1 align="center">
-    Jinja LSP
+    Jinja Language Server
     <br />
     <img src="https://img.shields.io/badge/license-MIT-blue.svg">
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg">
@@ -7,11 +7,11 @@
 </h1>
 
 <p align="center">
-    <b>The greatest Jinja LSP ever made.</b>
+    <b>Blazingly fast Jinja language server.</b>
 </p>
 
 > [!WARNING]
-> Jinja LSP is currently in early development.
+> Jinja Language Server is currently in early development.
 
 ## Acknowledgements
 

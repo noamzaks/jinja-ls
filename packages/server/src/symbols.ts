@@ -1,4 +1,4 @@
-import { ast } from "@jinja-lsp/language"
+import { ast } from "@jinja-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { walk } from "./utilities"
 

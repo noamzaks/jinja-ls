@@ -1,8 +1,8 @@
 {
-  "name": "@jinja-lsp/server",
+  "name": "@jinja-ls/server",
   "dependencies": {
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.12",
-    "@jinja-lsp/language": "workspace:*"
+    "@jinja-ls/language": "workspace:*"
   }
 }
