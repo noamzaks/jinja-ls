@@ -24,6 +24,22 @@ export class Node {
     child.parent = this
     this.children.push(child)
   }
+
+  getStart() {
+    return Math.min(
+      ...this.children
+        .filter((x) => x instanceof TokenNode)
+        .map((token) => token.start)
+    )
+  }
+
+  getEnd() {
+    return Math.max(
+      ...this.children
+        .filter((x) => x instanceof TokenNode)
+        .map((token) => token.end)
+    )
+  }
 }
 
 export class TokenNode extends Node {

@@ -4,6 +4,7 @@ import { TextDocument } from "vscode-languageserver-textdocument"
 import { createConnection } from "vscode-languageserver/node"
 import { filters, globals, tests } from "./generated"
 import { getTokens, legend } from "./semantic"
+import { argToPython, getSymbols, SymbolInfo } from "./symbols"
 import { tokenAt } from "./utilities"
 
 const connection = createConnection(lsp.ProposedFeatures.all)
@@ -16,6 +17,7 @@ const documentASTs: Map<
     parserErrors?: ast.ErrorNode[]
   }
 > = new Map()
+const documentSymbols: Map<string, Map<string, SymbolInfo>> = new Map()
 
 connection.onInitialize((params) => {
   return {
@@ -34,6 +36,7 @@ connection.onInitialize((params) => {
         full: true,
       },
       hoverProvider: true,
+      definitionProvider: true,
     },
   } satisfies lsp.InitializeResult
 })
@@ -42,6 +45,10 @@ documents.onDidChangeContent((event) => {
   const document = event.document
   const ast = getDocumentAST(document.getText())
   documentASTs.set(document.uri, ast)
+  if (ast.program) {
+    const symbols = getSymbols(ast.program)
+    documentSymbols.set(document.uri, symbols)
+  }
 })
 
 const getDocumentAST = (contents: string) => {
@@ -127,6 +134,7 @@ connection.languages.semanticTokens.on(async (params) => {
 connection.onHover(async (params) => {
   const document = documents.get(params.textDocument.uri)
   const program = documentASTs.get(params.textDocument.uri)?.program
+  const symbols = documentSymbols.get(params.textDocument.uri)
 
   if (program !== undefined && document !== undefined) {
     const offset = document.offsetAt(params.position)
@@ -147,7 +155,9 @@ connection.onHover(async (params) => {
         contents: [
           {
             language: "python",
-            value: `def ${token.value}(${filters[token.value].parameters
+            value: `(filter) def ${token.value}(${filters[
+              token.value
+            ].parameters
               .map((p) => (p.default ? `${p.name}=${p.default}` : p.name))
               .join(", ")})`,
           },
@@ -167,7 +177,7 @@ connection.onHover(async (params) => {
         contents: [
           {
             language: "python",
-            value: `def ${token.value}(${tests[token.value].parameters
+            value: `(test) def ${token.value}(${tests[token.value].parameters
               .map((p) => (p.default ? `${p.name}=${p.default}` : p.name))
               .join(", ")})`,
           },
@@ -176,24 +186,80 @@ connection.onHover(async (params) => {
       } satisfies lsp.Hover
     }
 
-    // Global Function
+    // Function
     if (
-      globals[token.value] &&
       token.parent?.type === "Identifier" &&
       token.parent.parent?.type === "CallExpression" &&
       (token.parent.parent as ast.CallExpression).callee === token.parent
     ) {
-      return {
-        contents: [
-          {
-            language: "python",
-            value: `def ${token.value}(${globals[token.value].parameters
-              .map((p) => (p.default ? `${p.name}=${p.default}` : p.name))
-              .join(", ")})`,
-          },
-          globals[token.value].brief,
-        ],
-      } satisfies lsp.Hover
+      // Global Function
+      if (globals[token.value]) {
+        return {
+          contents: [
+            {
+              language: "python",
+              value: `(global) def ${token.value}(${globals[
+                token.value
+              ].parameters
+                .map((p) => (p.default ? `${p.name}=${p.default}` : p.name))
+                .join(", ")})`,
+            },
+            globals[token.value].brief,
+          ],
+        } satisfies lsp.Hover
+      }
+
+      const symbol = symbols?.get(token.value)
+      if (symbol !== undefined) {
+        const macroNode = symbol.token.parent!.parent! as ast.Macro
+        return {
+          contents: [
+            {
+              language: "python",
+              value:
+                macroNode.args.length === 0
+                  ? `(macro) def ${token.value}()`
+                  : `(macro) def ${token.value}(\n\t${macroNode.args
+                      .map((arg) => argToPython(arg, document))
+                      .filter((x) => x !== undefined)
+                      .join(", \n\t")}\n)`,
+            },
+          ],
+        } satisfies lsp.Hover
+      }
+    }
+  }
+})
+
+connection.onDefinition(async (params) => {
+  const document = documents.get(params.textDocument.uri)
+  const program = documentASTs.get(params.textDocument.uri)?.program
+  const symbols = documentSymbols.get(params.textDocument.uri)
+
+  if (program !== undefined && document !== undefined) {
+    const offset = document.offsetAt(params.position)
+    const token = tokenAt(program, offset)
+    if (!token) {
+      return
+    }
+
+    if (
+      token.parent?.type === "Identifier" &&
+      token.parent.parent?.type === "CallExpression" &&
+      (token.parent.parent as ast.CallExpression).callee === token.parent
+    ) {
+      const symbol = symbols?.get(token.value)
+      if (!symbol) {
+        return
+      }
+
+      return lsp.Location.create(
+        params.textDocument.uri,
+        lsp.Range.create(
+          document.positionAt(symbol.token.start),
+          document.positionAt(symbol.token.end)
+        )
+      )
     }
   }
 })

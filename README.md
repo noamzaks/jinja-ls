@@ -25,13 +25,22 @@
 - [x] Make lexer and parser more error tolerant
 - [ ] Provide hover
   - [x] for built-in tests/filters/global functions
-  - [ ] for user-defined functions in scope
-- [ ] Track types of
-- [ ] Provide signature help
+  - [x] for user-defined macros
+    - [ ] in scope
 - [ ] Provide go to definition
+  - [x] for user-defined macros
+    - [ ] in scope
+    - [ ] including documentation
+- [ ] Add CI
+- [ ] Add tests
+- [ ] Resolve imports
+- [ ] Provide definitions/macros from imports
+- [ ] Track types of expressions
+- [ ] Provide signature help
 - [ ] Provide document symbols
 - [ ] Provide auto-complete
 - [ ] Provide an API for other extensions to specify the globals
 - [ ] Support embedded code languages in Markdown (hover, signature help, semantic highlighting, diagnostics)
 - [ ] Make lexer/parser more performant (incremental)
+- [ ] Support custom start/end symbols (instead of `{{, {%, {#`)
 - [ ] Rewrite in rust
