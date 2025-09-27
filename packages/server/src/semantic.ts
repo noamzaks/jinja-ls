@@ -29,6 +29,10 @@ export const getTokens = (statements: ast.Statement[]) => {
   const items: SemanticToken[] = []
   while (statements.length !== 0) {
     const statement = statements.pop()!
+    if (statement === undefined) {
+      continue
+    }
+
     if (statement.identifier) {
       items.push({
         start: statement.identifier.start,
@@ -117,9 +121,13 @@ export const getTokens = (statements: ast.Statement[]) => {
             tokenModifiers: 0,
           })
         }
+      case "Extends":
+        const extendsStatement = statement as ast.Extends
+        statements.push(extendsStatement.source)
+        break
       case "Include":
         const includeStatement = statement as ast.Include
-        statements.push(includeStatement.name)
+        statements.push(includeStatement.source)
         if (includeStatement.context) {
           items.push({
             start: includeStatement.context.token.start,

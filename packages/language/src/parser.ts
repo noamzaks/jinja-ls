@@ -75,6 +75,7 @@ export function parse(
 
     const prev = tokens[current++]
     if (!prev || prev.type !== type) {
+      current--
       createMissingNode(type, prev)
       return createErrorToken()
     }

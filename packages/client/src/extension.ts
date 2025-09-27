@@ -33,6 +33,17 @@ export const activate = (context: vscode.ExtensionContext) => {
   )
 
   client.start()
+
+  client.onRequest("jinja/readFile", async ({ uri }: { uri: string }) => {
+    try {
+      const document = await vscode.workspace.openTextDocument(
+        vscode.Uri.parse(uri).fsPath
+      )
+      return { contents: document.getText() }
+    } catch (e) {
+      return {}
+    }
+  })
 }
 
 export const deactivate = async () => {

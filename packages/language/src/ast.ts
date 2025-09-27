@@ -220,7 +220,10 @@ export class Block extends Statement {
 export class Include extends Statement {
   override type = "Include"
 
-  constructor(public name: Expression, public context: Identifier | undefined) {
+  constructor(
+    public source: Expression,
+    public context: Identifier | undefined
+  ) {
     super()
   }
 }
@@ -258,7 +261,7 @@ export class FromImport extends Statement {
 export class Extends extends Statement {
   override type = "Extends"
 
-  constructor(public name: Expression) {
+  constructor(public source: Expression) {
     super()
   }
 }
