@@ -208,7 +208,7 @@ export function tokenize(
               cursorPosition
             )
           )
-          return str
+          continue
         }
         str += unescaped
         continue
@@ -217,7 +217,7 @@ export function tokenize(
       str += source[cursorPosition++]
       if (cursorPosition >= source.length) {
         if (label) {
-          errors.push(new LexerError(label, cursorPosition - 1, source.length))
+          errors.push(new LexerError(label, source.length, source.length))
         }
         return str
       }
@@ -299,10 +299,16 @@ export function tokenize(
               source.length
             )
           )
+          // Make sure to take the last character as well
+          comment += source.slice(cursorPosition)
+          cursorPosition = source.length
+          break
         }
         comment += source[cursorPosition++]
       }
-      cursorPosition += 2 // Skip the closing #}
+      if (cursorPosition + 2 < source.length) {
+        cursorPosition += 2 // Skip the closing #}
+      }
       tokens.push(createToken(comment, TOKEN_TYPES.Comment))
 
       // Handle whitespace control
@@ -318,6 +324,8 @@ export function tokenize(
     if (cursorPosition >= source.length) {
       continue
     }
+    // Don't include whitespace in token range
+    previousCursorPosition = cursorPosition
 
     // Handle multi-character tokens
     const char = source[cursorPosition]
@@ -325,17 +333,7 @@ export function tokenize(
     // Check for unary operators
     if (char === "-" || char === "+") {
       const lastTokenType = tokens.at(-1)?.type
-      if (lastTokenType === TOKEN_TYPES.Text || lastTokenType === undefined) {
-        errors.push(
-          new LexerError(
-            `Unexpected character: ${char}`,
-            cursorPosition,
-            cursorPosition
-          )
-        )
-        cursorPosition++
-        continue
-      }
+
       switch (lastTokenType) {
         case TOKEN_TYPES.Identifier:
         case TOKEN_TYPES.NumericLiteral:
@@ -400,8 +398,10 @@ export function tokenize(
 
     if (char === "'" || char === '"') {
       ++cursorPosition // Skip the opening quote
-      const str = consumeWhile((c) => c !== char, "unterminated string literal")
-      ++cursorPosition // Skip the closing quote
+      const str = consumeWhile((c) => c !== char, "Unterminated string literal")
+      if (source[cursorPosition] == char) {
+        ++cursorPosition // Skip the closing quote
+      }
       tokens.push(createToken(str, TOKEN_TYPES.StringLiteral))
       continue
     }
@@ -436,6 +436,8 @@ export function tokenize(
       )
     )
     cursorPosition++
+    // Ignore this character
+    previousCursorPosition = cursorPosition
   }
 
   if (!safe) {
