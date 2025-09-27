@@ -15,6 +15,7 @@ const FORMATTING_TESTS = Object.freeze({
   CHAINED_PROPERTY_ACCESSES: {
     template: `{{ message.content.split('</think>')[0].rstrip('\\n').split('<think>')[-1].lstrip('\\n') }}`,
     formatted: `{{- message.content.split("</think>")[0].rstrip("\\n").split("<think>")[-1].lstrip("\\n") -}}`,
+    rendered: undefined,
   },
   MEMBERSHIP: {
     template: `{{ 'a' in 'abc' and False }}`,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { Template } from "../src/index"
-import { tokenize } from "../src/lexer"
+import { Token, tokenize } from "../src/lexer"
 import { parse } from "../src/parser"
 import { Environment, Interpreter, setupGlobals } from "../src/runtime"
 
@@ -193,7 +193,7 @@ const TEST_STRINGS = {
   UNPACKING: `{% macro mul(a, b, c) %}{{ a * b * c }}{% endmacro %}|{{ mul(1, 2, 3) }}|{{ mul(*[1, 2, 3]) }}|`,
 }
 
-const TEST_PARSED = {
+const TEST_PARSED: Record<string, Partial<Token>[]> = {
   // Text nodes
   NO_TEMPLATE: [{ value: "Hello world!", type: "Text", start: 0, end: 12 }],
   TEXT_NODES: [
@@ -3813,7 +3813,7 @@ const TEST_PARSED = {
   ],
 }
 
-const TEST_CONTEXT = {
+const TEST_CONTEXT: Record<string, any> = {
   // Text nodes
   NO_TEMPLATE: {},
   TEXT_NODES: {},
@@ -3870,7 +3870,7 @@ const TEST_CONTEXT = {
   // Numbers
   NUMBERS: {
     a: 0,
-    add: (x, y) => x + y,
+    add: (x: number, y: number) => x + y,
   },
 
   // Binary expressions
@@ -3890,7 +3890,7 @@ const TEST_CONTEXT = {
   FUNCTIONS: {
     x: 10,
     apple: "apple",
-    func: (...args) => args.length,
+    func: (...args: any[]) => args.length,
   },
 
   // Object properties
@@ -3903,9 +3903,9 @@ const TEST_CONTEXT = {
     x: "A",
     y: "B",
     obj: {
-      x: (...args) => args.join(""),
+      x: (...args: string[]) => args.join(""),
       z: {
-        A: (...args) => args.join("_"),
+        A: (...args: string[]) => args.join("_"),
       },
     },
   },
@@ -4127,7 +4127,7 @@ const TEST_CONTEXT = {
   UNPACKING: {},
 }
 
-const EXPECTED_OUTPUTS = {
+const EXPECTED_OUTPUTS: Record<string, string> = {
   // Text nodes
   NO_TEMPLATE: `Hello world!`,
   TEXT_NODES: `0A1BC2D3`,
@@ -4340,7 +4340,7 @@ describe("Templates", () => {
   describe("Parsing and interpretation", () => {
     describe("should interpret an AST", () => {
       for (const [name, text] of Object.entries(TEST_PARSED)) {
-        const ast = parse(text)
+        const ast = parse(text as Token[])
         if (
           TEST_CONTEXT[name] === undefined ||
           EXPECTED_OUTPUTS[name] === undefined
