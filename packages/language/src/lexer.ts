@@ -159,6 +159,7 @@ export function tokenize(
   let cursorPosition = 0
   let previousCursorPosition = 0
   let curlyBracketDepth = 0
+  let insideRaw = false
 
   const createToken = (value: string, type: TokenType) => {
     const result = new Token(
@@ -233,21 +234,35 @@ export function tokenize(
       lastTokenType === undefined ||
       lastTokenType === TOKEN_TYPES.CloseStatement ||
       lastTokenType === TOKEN_TYPES.CloseExpression ||
-      lastTokenType === TOKEN_TYPES.Comment
+      lastTokenType === TOKEN_TYPES.Comment ||
+      insideRaw
     ) {
       let text = ""
-      while (
-        cursorPosition < source.length &&
-        // Keep going until we hit the next Jinja statement or expression
-        !(
-          source[cursorPosition] === "{" &&
-          (source[cursorPosition + 1] === "%" ||
-            source[cursorPosition + 1] === "{" ||
-            source[cursorPosition + 1] === "#")
+      if (insideRaw) {
+        const rawStart = cursorPosition
+        const match = /{%[ \t]*endraw[ \t]*%}/.exec(
+          source.slice(cursorPosition)
         )
-      ) {
-        // Consume text
-        text += source[cursorPosition++]
+        if (match) {
+          cursorPosition += match.index
+        } else {
+          cursorPosition = source.length
+        }
+        text += source.slice(rawStart, cursorPosition)
+      } else {
+        while (
+          cursorPosition < source.length &&
+          // Keep going until we hit the next Jinja statement or expression
+          !(
+            source[cursorPosition] === "{" &&
+            (source[cursorPosition + 1] === "%" ||
+              source[cursorPosition + 1] === "{" ||
+              source[cursorPosition + 1] === "#")
+          )
+        ) {
+          // Consume text
+          text += source[cursorPosition++]
+        }
       }
 
       // There is some text to add
@@ -277,6 +292,7 @@ export function tokenize(
         }
 
         tokens.push(createToken(text, TOKEN_TYPES.Text))
+        insideRaw = false
         continue
       }
     }
@@ -391,6 +407,15 @@ export function tokenize(
           source[cursorPosition] === "\n"
         ) {
           ++cursorPosition
+        }
+        const previousToken = tokens.at(-2)
+        if (
+          type === "CloseStatement" &&
+          previousToken?.type === "Identifier" &&
+          previousToken.value === "raw" &&
+          tokens.at(-3)?.type === "OpenStatement"
+        ) {
+          insideRaw = true
         }
         continue main
       }
