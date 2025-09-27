@@ -78,12 +78,12 @@ connection.languages.diagnostics.on(async (params) => {
           severity: lsp.DiagnosticSeverity.Error,
         })
       } else if (e.type === "UnexpectedToken") {
-        const UnexpectedToken = e as ast.UnexpectedToken
+        const unexpectedToken = e as ast.UnexpectedToken
         items.push({
-          message: `Unexpected ${UnexpectedToken.message}`,
+          message: unexpectedToken.message,
           range: lsp.Range.create(
-            document.positionAt(UnexpectedToken.token.start),
-            document.positionAt(UnexpectedToken.token.end)
+            document.positionAt(unexpectedToken.token.start),
+            document.positionAt(unexpectedToken.token.end)
           ),
           severity: lsp.DiagnosticSeverity.Error,
         })
@@ -149,7 +149,8 @@ connection.onHover(async (params) => {
       token.parent?.type === "Identifier" &&
       ((token.parent?.parent?.type === "CallExpression" &&
         token.parent?.parent?.parent?.type === "FilterExpression") ||
-        token.parent?.parent?.type === "FilterExpression")
+        token.parent?.parent?.type === "FilterExpression" ||
+        token.parent?.parent?.type === "FilterStatement")
     ) {
       return {
         contents: [
