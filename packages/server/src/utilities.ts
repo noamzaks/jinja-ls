@@ -22,8 +22,22 @@ export const tokenAt = (program: ast.Program, offset: number) => {
       if (statementToken.start <= offset && offset <= statementToken.end) {
         token = statementToken
         return true
+      } else if (
+        statementToken.start <= offset &&
+        (token === undefined || statementToken.end > token.end)
+      ) {
+        token = statementToken
       }
     }
   })
   return token
+}
+
+export const parentOfType = (node: ast.Node | undefined, type: string) => {
+  while (node !== undefined) {
+    if (node.type === type) {
+      return node
+    }
+    node = node.parent
+  }
 }

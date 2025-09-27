@@ -4,8 +4,14 @@ import { TextDocument } from "vscode-languageserver-textdocument"
 import { createConnection } from "vscode-languageserver/node"
 import { filters, globals, tests } from "./generated"
 import { getTokens, legend } from "./semantic"
-import { argToPython, getSymbols, SymbolInfo } from "./symbols"
-import { tokenAt } from "./utilities"
+import {
+  argToParameterInformation,
+  getSymbols,
+  macroToDocumentation,
+  macroToSignature,
+  SymbolInfo,
+} from "./symbols"
+import { parentOfType, tokenAt } from "./utilities"
 
 const connection = createConnection(lsp.ProposedFeatures.all)
 const documents = new lsp.TextDocuments(TextDocument)
@@ -37,6 +43,9 @@ connection.onInitialize((params) => {
       },
       hoverProvider: true,
       definitionProvider: true,
+      signatureHelpProvider: {
+        triggerCharacters: ["(", ",", "="],
+      },
     },
   } satisfies lsp.InitializeResult
 })
@@ -212,18 +221,11 @@ connection.onHover(async (params) => {
 
       const symbol = symbols?.get(token.value)
       if (symbol !== undefined) {
-        const macroNode = symbol.token.parent!.parent! as ast.Macro
         return {
           contents: [
             {
               language: "python",
-              value:
-                macroNode.args.length === 0
-                  ? `(macro) def ${token.value}()`
-                  : `(macro) def ${token.value}(\n\t${macroNode.args
-                      .map((arg) => argToPython(arg, document))
-                      .filter((x) => x !== undefined)
-                      .join(", \n\t")}\n)`,
+              value: macroToDocumentation(symbol.token),
             },
           ],
         } satisfies lsp.Hover
@@ -244,12 +246,13 @@ connection.onDefinition(async (params) => {
       return
     }
 
-    if (
-      token.parent?.type === "Identifier" &&
-      token.parent.parent?.type === "CallExpression" &&
-      (token.parent.parent as ast.CallExpression).callee === token.parent
-    ) {
-      const symbol = symbols?.get(token.value)
+    const callExpression = parentOfType(token, "CallExpression") as
+      | ast.CallExpression
+      | undefined
+
+    if (callExpression !== undefined) {
+      const name = (callExpression.callee as ast.Identifier).token.value
+      const symbol = symbols?.get(name)
       if (!symbol) {
         return
       }
@@ -257,10 +260,92 @@ connection.onDefinition(async (params) => {
       return lsp.Location.create(
         params.textDocument.uri,
         lsp.Range.create(
-          document.positionAt(symbol.token.start),
-          document.positionAt(symbol.token.end)
+          document.positionAt(symbol.token.name.token.start),
+          document.positionAt(symbol.token.name.token.end)
         )
       )
+    }
+  }
+})
+
+connection.onSignatureHelp(async (params) => {
+  const document = documents.get(params.textDocument.uri)
+  const program = documentASTs.get(params.textDocument.uri)?.program
+  const symbols = documentSymbols.get(params.textDocument.uri)
+
+  if (program !== undefined && document !== undefined) {
+    const offset = document.offsetAt(params.position)
+    const token = tokenAt(program, offset - 1)
+    if (!token) {
+      return
+    }
+
+    const callExpression = parentOfType(token, "CallExpression") as
+      | ast.CallExpression
+      | undefined
+
+    if (callExpression !== undefined) {
+      const callee = callExpression.callee as ast.Identifier
+      const name = callee.token.value
+      const symbol = symbols?.get(name)
+      if (!symbol) {
+        return
+      }
+
+      const parameters = symbol.token.args
+        .map(argToParameterInformation)
+        .filter((x) => x !== undefined)
+
+      const currentCallText = document
+        .getText(
+          lsp.Range.create(
+            document.positionAt(callee.token.end + 1),
+            document.positionAt(callExpression.closeParenToken!.start)
+          )
+        )
+        .trimEnd()
+      let activeParameter = 0
+      const lastPeriod = currentCallText.lastIndexOf(
+        ",",
+        document.offsetAt(params.position) - callee.token.end - 2
+      )
+      const nextPeriod = currentCallText.indexOf(",", lastPeriod + 1)
+      const currentParameter = currentCallText.slice(
+        lastPeriod + 1,
+        nextPeriod === -1 ? undefined : nextPeriod
+      )
+      const previousParameters = currentCallText.slice(0, lastPeriod + 1)
+      // TODO: this could also appear inside a string
+      const equalIndex = currentParameter.indexOf("=")
+      if (equalIndex !== -1) {
+        activeParameter = parameters.findIndex(
+          (parameter) =>
+            parameter.label === currentParameter.slice(0, equalIndex).trim()
+        )
+      } else if (!previousParameters.includes("=")) {
+        for (const c of currentCallText.slice(
+          0,
+          nextPeriod === -1 ? undefined : nextPeriod
+        )) {
+          if (c === ",") {
+            activeParameter++
+          }
+        }
+      } else {
+        activeParameter = -1
+      }
+
+      return {
+        signatures: [
+          lsp.SignatureInformation.create(
+            macroToSignature(symbol.token),
+            undefined,
+            ...parameters
+          ),
+        ],
+        activeSignature: 0,
+        activeParameter,
+      } satisfies lsp.SignatureHelp
     }
   }
 })

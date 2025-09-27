@@ -260,7 +260,10 @@ function formatFilterStatement(
   return out
 }
 
-function formatExpression(node: Expression, parentPrec: number = -1): string {
+export function formatExpression(
+  node: Expression,
+  parentPrec: number = -1
+): string {
   switch (node.type) {
     case "SpreadExpression": {
       const n = node as SpreadExpression

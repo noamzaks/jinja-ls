@@ -12,7 +12,7 @@
  */
 import type { Program } from "./ast"
 import * as ast from "./ast"
-import { format } from "./format"
+import { format, formatExpression } from "./format"
 import { LexerError, tokenize } from "./lexer"
 import { parse } from "./parser"
 import type { StringValue } from "./runtime"
@@ -55,4 +55,12 @@ export class Template {
   }
 }
 
-export { ast, Environment, Interpreter, LexerError, parse, tokenize }
+export {
+  ast,
+  Environment,
+  formatExpression,
+  Interpreter,
+  LexerError,
+  parse,
+  tokenize,
+}

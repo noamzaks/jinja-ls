@@ -31,12 +31,14 @@
   - [x] for user-defined macros
     - [ ] in scope
     - [ ] including documentation
+- [ ] Provide signature help
+  - [x] for user-defined macros
+- [ ] Provide format document
 - [ ] Add CI
 - [ ] Add tests
 - [ ] Resolve imports
 - [ ] Provide definitions/macros from imports
 - [ ] Track types of expressions
-- [ ] Provide signature help
 - [ ] Provide document symbols
 - [ ] Provide auto-complete
 - [ ] Provide an API for other extensions to specify the globals
