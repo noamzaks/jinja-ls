@@ -92,12 +92,17 @@ export const getTokens = (statements: ast.Statement[]) => {
         break
       case "Raw":
         const rawStatement = statement as ast.Raw
-        items.push({
-          start: rawStatement.closeToken!.end,
-          end: rawStatement.closerOpenToken!.start,
-          tokenType: 11,
-          tokenModifiers: 0,
-        })
+        if (
+          rawStatement.closeToken !== undefined &&
+          rawStatement.closerOpenToken !== undefined
+        ) {
+          items.push({
+            start: rawStatement.closeToken.end,
+            end: rawStatement.closerOpenToken.start,
+            tokenType: 11,
+            tokenModifiers: 0,
+          })
+        }
         break
       case "Include":
         const includeStatement = statement as ast.Include
@@ -174,19 +179,20 @@ export const getTokens = (statements: ast.Statement[]) => {
         break
       case "Identifier":
         const identifierStatement = statement as ast.Identifier
-        let tokenModifiers = 0
+        let tokenType = 9
         if (
           ["true", "false", "none", "True", "False", "None"].includes(
             identifierStatement.value
           )
         ) {
-          tokenModifiers = 8
+          // Render built-in constants as macros, the colors match
+          tokenType = 3
         }
         items.push({
           start: identifierStatement.token.start,
           end: identifierStatement.token.end,
-          tokenType: 9,
-          tokenModifiers,
+          tokenType,
+          tokenModifiers: 0,
         })
         break
       case "IntegerLiteral":
