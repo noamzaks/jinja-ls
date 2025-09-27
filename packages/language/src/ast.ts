@@ -181,13 +181,6 @@ export class For extends Statement {
   }
 }
 
-export class Break extends Statement {
-  override type = "Break"
-}
-export class Continue extends Statement {
-  override type = "Continue"
-}
-
 export class SetStatement extends Statement {
   override type = "Set"
   constructor(
@@ -210,10 +203,62 @@ export class Raw extends Statement {
   }
 }
 
+export class Block extends Statement {
+  override type = "Block"
+
+  constructor(
+    public name: Identifier,
+    public body: Statement[],
+    public required: TokenNode | undefined,
+    public scoped: TokenNode | undefined
+  ) {
+    super()
+    this.addChildren(...body)
+  }
+}
+
 export class Include extends Statement {
   override type = "Include"
 
-  constructor(public name: StringLiteral) {
+  constructor(public name: Expression, public context: Identifier | undefined) {
+    super()
+  }
+}
+
+export class Import extends Statement {
+  override type = "Import"
+
+  constructor(
+    public source: Expression,
+    public asToken: TokenNode,
+    public name: Identifier,
+    public context: Identifier | undefined
+  ) {
+    super()
+  }
+}
+
+export class FromImport extends Statement {
+  override type = "FromImport"
+
+  constructor(
+    public source: Expression,
+    public importToken: TokenNode,
+    public imports: {
+      source: Identifier
+      asToken: TokenNode | undefined
+      name: Identifier | undefined
+    }[],
+    public context: Identifier | undefined
+  ) {
+    super()
+  }
+}
+
+export class Extends extends Statement {
+  override type = "Extends"
+
+  constructor(public name: Expression) {
     super()
   }
 }

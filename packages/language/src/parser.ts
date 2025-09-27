@@ -1,19 +1,21 @@
 import {
   ArrayLiteral,
   BinaryExpression,
-  Break,
+  Block,
   CallExpression,
   CallStatement,
   Comment,
-  Continue,
   createTokenNode,
   ErrorNode,
+  Extends,
   FilterExpression,
   FilterStatement,
   FloatLiteral,
   For,
+  FromImport,
   Identifier,
   If,
+  Import,
   Include,
   IntegerLiteral,
   KeywordArgumentExpression,
@@ -196,9 +198,25 @@ export function parse(
         ++current
         result = parseRawStatement()
         break
+      case "block":
+        ++current
+        result = parseBlockStatement()
+        break
       case "include":
         ++current
         result = parseIncludeStatement()
+        break
+      case "from":
+        ++current
+        result = parseFromImportStatement()
+        break
+      case "import":
+        ++current
+        result = parseImportStatement()
+        break
+      case "extends":
+        ++current
+        result = parseExtendsStatement()
         break
       case "set":
         ++current
@@ -264,16 +282,6 @@ export function parse(
         expectCloserStatement(result, "endcall")
         break
       }
-      case "break":
-        ++current
-        closeToken = expect(TOKEN_TYPES.CloseStatement)
-        result = new Break()
-        break
-      case "continue":
-        ++current
-        closeToken = expect(TOKEN_TYPES.CloseStatement)
-        result = new Continue()
-        break
       case "filter": {
         ++current // consume 'filter'
         let filterNode = parsePrimaryExpression()
@@ -294,7 +302,10 @@ export function parse(
         break
       }
       default:
-        result = createUnexpectedToken(`statement '${name}'`, tokens[current])
+        result = createUnexpectedToken(
+          `Unexpected statement '${name}'`,
+          tokens[current]
+        )
         current--
         eatUntil(TOKEN_TYPES.CloseStatement, false)
         result.addChild(new TokenNode(tokens[current++]), "closeToken")
@@ -324,15 +335,121 @@ export function parse(
     return result
   }
 
-  function parseIncludeStatement(): Include | MissingNode {
-    const nameStart = current
-    const name = parsePrimaryExpression()
-    if (name.type !== "StringLiteral") {
-      const result = createMissingNode("string literal", tokens[nameStart])
-      eatUntil(TOKEN_TYPES.CloseStatement)
+  function parseImportContext(): Identifier | undefined {
+    if (
+      tokens[current].type === "Identifier" &&
+      (tokens[current].value === "with" ||
+        tokens[current].value === "without") &&
+      tokens[current + 1]?.type === "Identifier" &&
+      tokens[current + 1]?.value === "context"
+    ) {
+      const result = new Identifier(
+        tokens[current].value,
+        new TokenNode(
+          new Token(
+            tokens[current].value,
+            TOKEN_TYPES.Identifier,
+            tokens[current].start,
+            tokens[current + 1].end
+          )
+        )
+      )
+      current += 2
       return result
     }
-    const result = new Include(name as StringLiteral)
+  }
+
+  function parseIncludeStatement(): Include | MissingNode {
+    const name = parseExpression()
+    const result = new Include(name, parseImportContext())
+    result.addChild(
+      new TokenNode(expect(TOKEN_TYPES.CloseStatement)),
+      "closeToken"
+    )
+    return result
+  }
+
+  function parseImportStatement(): Import | MissingNode {
+    const source = parseExpression()
+    const asToken = expectIdentifier("as")
+    const name = expect(TOKEN_TYPES.Identifier)
+    const result = new Import(
+      source,
+      new TokenNode(asToken),
+      new Identifier(name.value, new TokenNode(name)),
+      parseImportContext()
+    )
+    result.addChild(
+      new TokenNode(expect(TOKEN_TYPES.CloseStatement)),
+      "closeToken"
+    )
+    return result
+  }
+
+  function parseFromImportStatement(): FromImport | MissingNode {
+    const source = parseExpression()
+    const importToken = expectIdentifier("import")
+    const imports: {
+      source: Identifier
+      asToken: TokenNode | undefined
+      name: Identifier | undefined
+    }[] = []
+    let context: Identifier | undefined = undefined
+
+    while (
+      tokens[current]?.type === "Identifier" ||
+      tokens[current]?.type === "Comma"
+    ) {
+      context = parseImportContext()
+      if (context !== undefined) {
+        break
+      }
+
+      if (imports.length !== 0) {
+        expect(TOKEN_TYPES.Comma)
+        if (tokens[current]?.type !== "Identifier") {
+          const missing = createMissingNode("identifier", tokens[current])
+          eatUntil(TOKEN_TYPES.CloseExpression)
+          return missing
+        }
+      }
+
+      const source = new Identifier(
+        tokens[current].value,
+        new TokenNode(tokens[current])
+      )
+      current++
+      let asToken: TokenNode | undefined = undefined
+      let name: Identifier | undefined = undefined
+      if (tokens[current]?.type === "Identifier") {
+        context = parseImportContext()
+        if (context === undefined) {
+          asToken = new TokenNode(expectIdentifier("as"))
+          name = new Identifier(
+            tokens[current].value,
+            new TokenNode(expect(TOKEN_TYPES.Identifier))
+          )
+        }
+      }
+      imports.push({ source, asToken, name })
+    }
+
+    const result = new FromImport(
+      source,
+      new TokenNode(importToken),
+      imports,
+      context
+    )
+    result.addChild(
+      new TokenNode(expect(TOKEN_TYPES.CloseStatement)),
+      "closeToken"
+    )
+    return result
+  }
+
+  function parseExtendsStatement(): Extends | MissingNode {
+    const name = parseExpression()
+    const result = new Extends(name)
     result.addChild(
       new TokenNode(expect(TOKEN_TYPES.CloseStatement)),
       "closeToken"
@@ -350,6 +467,64 @@ export function parse(
     raw.addChild(new TokenNode(closeToken), "closeToken")
     expectCloserStatement(raw, "endraw")
     return raw
+  }
+
+  function parseBlockStatement(): Block {
+    const body: Statement[] = []
+    const name = expect(TOKEN_TYPES.Identifier)
+    let required: TokenNode | undefined = undefined
+    let scoped: TokenNode | undefined = undefined
+    if (
+      tokens[current].type === "Identifier" &&
+      tokens[current].value === "scoped"
+    ) {
+      scoped = new TokenNode(tokens[current++])
+    }
+    if (
+      tokens[current].type === "Identifier" &&
+      tokens[current].value === "required"
+    ) {
+      required = new TokenNode(tokens[current++])
+    }
+
+    const closeToken = expect(TOKEN_TYPES.CloseStatement)
+    while (current < tokens.length && !isStatement("endblock")) {
+      body.push(parseAny())
+    }
+    const block = new Block(
+      new Identifier(name.value, new TokenNode(name)),
+      body,
+      required,
+      scoped
+    )
+    block.addChild(new TokenNode(closeToken), "closeToken")
+    if (current >= tokens.length) {
+      createMissingNode(`'{% endblock %}'`, tokens[tokens.length - 1])
+      return block
+    }
+
+    block.addChild(
+      new TokenNode(expect(TOKEN_TYPES.OpenStatement)),
+      "closerOpenToken"
+    )
+    block.addChild(
+      new TokenNode(expectIdentifier("endblock")),
+      "closerIdentifier"
+    )
+    if (tokens[current].type === "Identifier") {
+      if (tokens[current].value !== name.value) {
+        createUnexpectedToken(
+          `Expected '${name.value}', got '${tokens[current].value}' instead`,
+          tokens[current]
+        )
+      }
+      current++
+    }
+    block.addChild(
+      new TokenNode(expect(TOKEN_TYPES.CloseStatement)),
+      "closerCloseToken"
+    )
+    return block
   }
 
   // NOTE: `set` acts as both declaration statement and assignment expression
@@ -658,8 +833,7 @@ export function parse(
   function parseAdditiveExpression(): Statement {
     let left = parseMultiplicativeExpression()
     while (is(TOKEN_TYPES.AdditiveBinaryOperator)) {
-      const operator = tokens[current]
-      ++current
+      const operator = tokens[current++]
       const right = parseMultiplicativeExpression()
       left = new BinaryExpression(new TokenNode(operator), left, right)
     }
@@ -822,12 +996,22 @@ export function parse(
   }
 
   function parseMultiplicativeExpression(): Statement {
+    let left = parsePowerExpression()
+    while (is(TOKEN_TYPES.MultiplicativeBinaryOperator)) {
+      const operator = tokens[current++]
+      const right = parsePowerExpression()
+      left = new BinaryExpression(new TokenNode(operator), left, right)
+    }
+    return left
+  }
+
+  function parsePowerExpression(): Statement {
     let left = parseTestExpression()
 
-    // Multiplicative operators have higher precedence than test expressions
-    // e.g., (4 * 4 is divisibleby(2)) evaluates as (4 * (4 is divisibleby(2)))
+    // Power operators have higher precedence than test expressions
+    // e.g., (4 ** 4 is divisibleby(2)) evaluates as (4 ** (4 is divisibleby(2)))
 
-    while (is(TOKEN_TYPES.MultiplicativeBinaryOperator)) {
+    while (is(TOKEN_TYPES.PowerBinaryOperator)) {
       const operator = tokens[current++]
       const right = parseTestExpression()
       left = new BinaryExpression(new TokenNode(operator), left, right)
@@ -847,7 +1031,6 @@ export function parse(
         notToken = tokens[current++] // consume not
       }
 
-      const filterStart = current
       let filter = parsePrimaryExpression()
       if (!(filter instanceof Identifier)) {
         createMissingNode("identifier for the test", tokens[current - 1])

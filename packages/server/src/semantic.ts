@@ -84,12 +84,6 @@ export const getTokens = (statements: ast.Statement[]) => {
           })
         }
         break
-      case "Break":
-        const breakStatement = statement as ast.Break
-        break
-      case "Continue":
-        const continueStatement = statement as ast.Continue
-        break
       case "Raw":
         const rawStatement = statement as ast.Raw
         if (
@@ -104,9 +98,80 @@ export const getTokens = (statements: ast.Statement[]) => {
           })
         }
         break
+      case "Block":
+        const blockStatement = statement as ast.Block
+        statements.push(...blockStatement.body)
+        if (blockStatement.required) {
+          items.push({
+            start: blockStatement.required.start,
+            end: blockStatement.required.end,
+            tokenType: 8,
+            tokenModifiers: 0,
+          })
+        }
+        if (blockStatement.scoped) {
+          items.push({
+            start: blockStatement.scoped.start,
+            end: blockStatement.scoped.end,
+            tokenType: 8,
+            tokenModifiers: 0,
+          })
+        }
       case "Include":
         const includeStatement = statement as ast.Include
         statements.push(includeStatement.name)
+        if (includeStatement.context) {
+          items.push({
+            start: includeStatement.context.token.start,
+            end: includeStatement.context.token.end,
+            tokenType: 8,
+            tokenModifiers: 0,
+          })
+        }
+        break
+      case "FromImport":
+        const fromImportStatement = statement as ast.FromImport
+        statements.push(fromImportStatement.source)
+        for (const importPart of fromImportStatement.imports) {
+          statements.push(importPart.source)
+          if (importPart.name) {
+            statements.push(importPart.name)
+          }
+          if (importPart.asToken) {
+            items.push({
+              start: importPart.asToken.start,
+              end: importPart.asToken.end,
+              tokenType: 8,
+              tokenModifiers: 0,
+            })
+          }
+        }
+        if (fromImportStatement.context) {
+          items.push({
+            start: fromImportStatement.context.token.start,
+            end: fromImportStatement.context.token.end,
+            tokenType: 8,
+            tokenModifiers: 0,
+          })
+        }
+        break
+      case "Import":
+        const importStatement = statement as ast.Import
+        statements.push(importStatement.name)
+        items.push({
+          start: importStatement.asToken.start,
+          end: importStatement.asToken.end,
+          tokenType: 8,
+          tokenModifiers: 0,
+        })
+        if (importStatement.context) {
+          items.push({
+            start: importStatement.context.token.start,
+            end: importStatement.context.token.end,
+            tokenType: 8,
+            tokenModifiers: 0,
+          })
+        }
         break
       case "Set":
         const setStatement = statement as ast.SetStatement

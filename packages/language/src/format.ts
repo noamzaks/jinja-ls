@@ -35,6 +35,8 @@ const CLOSE_STATEMENT = " -%}"
 
 function getBinaryOperatorPrecedence(expr: BinaryExpression): number {
   switch (expr.operator.token.type) {
+    case "PowerBinaryOperator":
+      return 5
     case "MultiplicativeBinaryOperator":
       return 4
     case "AdditiveBinaryOperator":
