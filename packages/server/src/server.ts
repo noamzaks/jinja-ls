@@ -1,4 +1,10 @@
-import { ast, LexerError, parse, tokenize } from "@jinja-ls/language"
+import {
+  ast,
+  formatExpression,
+  LexerError,
+  parse,
+  tokenize,
+} from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { createConnection } from "vscode-languageserver/node"
@@ -340,6 +346,39 @@ connection.onHover(async (params) => {
         } satisfies lsp.Hover
       }
     }
+
+    if (token.parent?.type === "Identifier") {
+      const identifier = token.parent as ast.Identifier
+      const [symbol, symbolDocument] = findSymbol(
+        document,
+        identifier,
+        identifier.value,
+        "Variable",
+        documents,
+        documentASTs,
+        documentSymbols,
+        documentImports
+      )
+
+      if (
+        symbol !== undefined &&
+        symbolDocument !== undefined &&
+        symbol.token.openToken !== undefined &&
+        symbol.token.closeToken !== undefined &&
+        symbol.token.assignee.type === "Identifier"
+      ) {
+        if (symbol.token.value) {
+          return {
+            contents: [
+              {
+                language: "jinja",
+                value: formatExpression(symbol.token.value),
+              },
+            ],
+          } satisfies lsp.Hover
+        }
+      }
+    }
   }
 })
 
@@ -456,6 +495,43 @@ connection.onDefinition(async (params) => {
             lsp.Range.create(
               document.positionAt(blockStatement.name.token.start),
               document.positionAt(blockStatement.name.token.end)
+            )
+          ),
+        ]
+      }
+    }
+
+    if (token.parent?.type === "Identifier") {
+      const identifier = token.parent as ast.Identifier
+      const [symbol, symbolDocument] = findSymbol(
+        document,
+        identifier,
+        identifier.value,
+        "Variable",
+        documents,
+        documentASTs,
+        documentSymbols,
+        documentImports
+      )
+
+      if (
+        symbol !== undefined &&
+        symbolDocument !== undefined &&
+        symbol.token.openToken !== undefined &&
+        symbol.token.closeToken !== undefined &&
+        symbol.token.assignee.type === "Identifier"
+      ) {
+        const assignee = symbol.token.assignee as ast.Identifier
+        return [
+          lsp.LocationLink.create(
+            symbolDocument.uri,
+            lsp.Range.create(
+              symbolDocument.positionAt(symbol.token.openToken.start),
+              symbolDocument.positionAt(symbol.token.closeToken.end)
+            ),
+            lsp.Range.create(
+              symbolDocument.positionAt(assignee.token.start),
+              symbolDocument.positionAt(assignee.token.end)
             )
           ),
         ]

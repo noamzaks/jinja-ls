@@ -12,6 +12,7 @@ export type SymbolInfo =
       type: "Block"
       token: ast.Block
     }
+  | { type: "Variable"; token: ast.SetStatement }
 
 export const collectSymbols = (
   statement: ast.Node,
@@ -36,6 +37,15 @@ export const collectSymbols = (
       type: "Block",
       token: blockStatement,
     })
+  } else if (statement.type === "Set") {
+    const setStatement = statement as ast.SetStatement
+    if (setStatement.assignee.type === "Identifier") {
+      const variable = (setStatement.assignee as ast.Identifier).token.value
+      addSymbol(variable, {
+        type: "Variable",
+        token: setStatement,
+      })
+    }
   } else if (
     statement.type === "Import" ||
     statement.type === "Include" ||
@@ -128,41 +138,42 @@ export const isInScope = (
   return false
 }
 
-export const findSymbolInDocument = (
+export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
   symbols: Map<string, SymbolInfo[]> | undefined,
   name: string,
-  type: string,
+  type: K,
   program: ast.Program | undefined,
   inScopeOf: ast.Node | undefined = undefined
-) => {
+): Extract<SymbolInfo, { type: K }> | undefined => {
   // TODO: remove sorting here
   const symbolOptions = (symbols?.get(name) ?? []).sort(
-    (a, b) => a.token.name.token.start - b.token.name.token.start
+    (a, b) =>
+      // @ts-ignore
+      (a.token?.name?.token?.start ?? a.token.openToken.start) -
+      // @ts-ignore
+      (b.token?.name?.token?.start ?? b.token.openToken?.start)
   )
 
   // Look from the last to the first definition of this symbol to find the last one.
   for (const symbol of symbolOptions.reverse()) {
     if (symbol?.type !== type) {
-      return
+      continue
     }
-
     if (!symbol.token) {
-      return
+      continue
     }
-
     if (!isInScope(symbol.token, inScopeOf, program)) {
-      return
+      continue
     }
-
-    return symbol
+    return symbol as Extract<SymbolInfo, { type: K }>
   }
 }
 
-export const findSymbol = (
+export const findSymbol = <K extends SymbolInfo["type"]>(
   document: TextDocument,
   inScopeOf: ast.Node | undefined,
   name: string,
-  type: string,
+  type: K,
   documents: Map<string, TextDocument>,
   documentASTs: Map<
     string,
@@ -183,7 +194,7 @@ export const findSymbol = (
   }: { checkCurrent?: boolean; importTypes?: string[] } = {
     checkCurrent: true,
   }
-): [SymbolInfo, TextDocument] | [] => {
+): [Extract<SymbolInfo, { type: K }>, TextDocument] | [] => {
   const program = documentASTs.get(document.uri)?.program
 
   if (checkCurrent) {
@@ -222,7 +233,7 @@ export const findSymbol = (
     }
 
     const symbols = documentSymbols.get(importedUri)
-    let symbol: SymbolInfo | undefined = undefined
+    let symbol: Extract<SymbolInfo, { type: K }> | undefined = undefined
     if (importStatement.type === "Import") {
       const i = importStatement as ast.Import
       if (i.name.value === name) {
