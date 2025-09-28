@@ -154,6 +154,12 @@ export const getTokens = (statements: ast.Statement[]) => {
             })
           }
         }
+        items.push({
+          start: fromImportStatement.importToken.start,
+          end: fromImportStatement.importToken.end,
+          tokenType: 8,
+          tokenModifiers: 0,
+        })
         if (fromImportStatement.context) {
           items.push({
             start: fromImportStatement.context.token.start,

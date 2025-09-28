@@ -10,7 +10,6 @@ import {
   collectSymbols,
   findSymbol,
   importToUri,
-  macroToDocumentation,
   macroToSignature,
   SymbolInfo,
 } from "./symbols"
@@ -37,7 +36,7 @@ const documentImports = new Map<
   string,
   (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
 >()
-const documentSymbols = new Map<string, Map<string, SymbolInfo>>()
+const documentSymbols = new Map<string, Map<string, SymbolInfo[]>>()
 
 connection.onInitialize((params) => {
   return {
@@ -68,13 +67,13 @@ const analyzeDocument = (document: TextDocument) => {
   documents.set(document.uri, document)
   const ast = getDocumentAST(document.getText())
   documentASTs.set(document.uri, ast)
-  const symbols = new Map<string, SymbolInfo>()
+  const symbols = new Map<string, SymbolInfo[]>()
   const imports: (ast.Include | ast.Import | ast.FromImport | ast.Extends)[] =
     []
 
   if (ast.program) {
     walk(ast.program, (statement) => {
-      collectSymbols(document.uri, statement, symbols, imports)
+      collectSymbols(statement, symbols, imports)
     })
 
     documentSymbols.set(document.uri, symbols)
@@ -192,7 +191,6 @@ connection.languages.semanticTokens.on(async (params) => {
 connection.onHover(async (params) => {
   const document = documents.get(params.textDocument.uri)
   const program = documentASTs.get(params.textDocument.uri)?.program
-  const symbols = documentSymbols.get(params.textDocument.uri)
 
   if (program !== undefined && document !== undefined) {
     const offset = document.offsetAt(params.position)
@@ -268,20 +266,75 @@ connection.onHover(async (params) => {
         } satisfies lsp.Hover
       }
 
-      const [symbol] = findSymbol(
+      const [symbol, symbolDocument] = findSymbol(
         document,
+        token,
         token.value,
         "Macro",
         documents,
+        documentASTs,
         documentSymbols,
         documentImports
       )
-      if (symbol !== undefined) {
+      if (
+        symbol !== undefined &&
+        symbolDocument !== undefined &&
+        symbol.token.openToken !== undefined &&
+        symbol.token.closeToken !== undefined
+      ) {
         return {
           contents: [
             {
-              language: "python",
-              value: macroToDocumentation(symbol.token as ast.Macro),
+              language: "jinja",
+              value: symbolDocument.getText(
+                lsp.Range.create(
+                  symbolDocument.positionAt(symbol.token.openToken.start),
+                  symbolDocument.positionAt(symbol.token.closeToken.end)
+                )
+              ),
+            },
+          ],
+        } satisfies lsp.Hover
+      }
+    }
+
+    // Block
+    if (
+      token.parent?.type === "Identifier" &&
+      token.parent.parent?.type === "Block" &&
+      (token.parent.parent as ast.Block).name === token.parent
+    ) {
+      const block = token.parent.parent as ast.Block
+      const [blockSymbol, blockDocument] = findSymbol(
+        document,
+        block,
+        block.name.value,
+        "Block",
+        documents,
+        documentASTs,
+        documentSymbols,
+        documentImports,
+        { checkCurrent: false, importTypes: ["Extends"] }
+      )
+      const sourceBlock = blockSymbol?.token as ast.Block | undefined
+      if (
+        blockSymbol !== undefined &&
+        blockDocument !== undefined &&
+        sourceBlock?.openToken !== undefined &&
+        sourceBlock?.closeToken !== undefined
+      ) {
+        const sourceText = blockDocument.getText(
+          lsp.Range.create(
+            blockDocument.positionAt(sourceBlock.openToken.start),
+            blockDocument.positionAt(sourceBlock.closeToken.end)
+          )
+        )
+
+        return {
+          contents: [
+            {
+              language: "jinja",
+              value: sourceText,
             },
           ],
         } satisfies lsp.Hover
@@ -293,7 +346,6 @@ connection.onHover(async (params) => {
 connection.onDefinition(async (params) => {
   const document = documents.get(params.textDocument.uri)
   const program = documentASTs.get(params.textDocument.uri)?.program
-  const symbols = documentSymbols.get(params.textDocument.uri)
   const imports = documentImports.get(params.textDocument.uri)
 
   if (program !== undefined && document !== undefined) {
@@ -314,14 +366,16 @@ connection.onDefinition(async (params) => {
       const name = (callExpression.callee as ast.Identifier).token.value
       const [symbol, symbolDocument] = findSymbol(
         document,
+        callExpression,
         name,
         "Macro",
         documents,
+        documentASTs,
         documentSymbols,
         documentImports
       )
 
-      if (symbol !== undefined) {
+      if (symbol !== undefined && symbolDocument !== undefined) {
         return lsp.Location.create(
           symbolDocument.uri,
           lsp.Range.create(
@@ -350,6 +404,7 @@ connection.onDefinition(async (params) => {
         importedFilename
       ).toString()
 
+      const sourceLiteral = includeExpression.source as ast.StringLiteral
       return [
         lsp.LocationLink.create(
           uri,
@@ -362,11 +417,9 @@ connection.onDefinition(async (params) => {
             lsp.Position.create(0, 0)
           ),
           lsp.Range.create(
+            document.positionAt(sourceLiteral.tokens[0].start),
             document.positionAt(
-              (includeExpression.source as ast.StringLiteral).tokens[0].start
-            ),
-            document.positionAt(
-              (includeExpression.source as ast.StringLiteral).tokens.at(-1)!.end
+              sourceLiteral.tokens[sourceLiteral.tokens.length - 1].end
             )
           )
         ),
@@ -376,31 +429,25 @@ connection.onDefinition(async (params) => {
     const blockStatement = parentOfType(token, "Block") as ast.Block | undefined
 
     if (blockStatement !== undefined && imports !== undefined) {
-      const matches = imports
-        .map((i) => {
-          if (i.type !== "Extends") {
-            return
-          }
-          const importUri = importToUri(i, document.uri)
-          if (!importUri) {
-            return
-          }
+      const [sourceBlock, sourceBlockDocument] = findSymbol(
+        document,
+        undefined,
+        blockStatement.name.value,
+        "Block",
+        documents,
+        documentASTs,
+        documentSymbols,
+        documentImports,
+        { checkCurrent: false, importTypes: ["Extends"] }
+      )
 
-          const symbols = documentSymbols.get(importUri)
-          const symbol = symbols?.get(blockStatement.name.value)
-          if (symbol?.type === "Block") {
-            return [importUri, symbol.token] as const
-          }
-        })
-        .filter((x) => x !== undefined)
-      if (matches.length > 0) {
-        const [importUri, block] = matches[0]
+      if (sourceBlock !== undefined && sourceBlockDocument !== undefined) {
         return [
           lsp.LocationLink.create(
-            importUri,
+            sourceBlockDocument.uri,
             lsp.Range.create(
-              document.positionAt(block.name.token.start),
-              document.positionAt(block.name.token.end)
+              document.positionAt(sourceBlock.token.name.token.start),
+              document.positionAt(sourceBlock.token.name.token.end)
             ),
             lsp.Range.create(
               document.positionAt(blockStatement.name.token.start),
@@ -420,7 +467,6 @@ connection.onDefinition(async (params) => {
 connection.onSignatureHelp(async (params) => {
   const document = documents.get(params.textDocument.uri)
   const program = documentASTs.get(params.textDocument.uri)?.program
-  const symbols = documentSymbols.get(params.textDocument.uri)
 
   if (program !== undefined && document !== undefined) {
     const offset = document.offsetAt(params.position)
@@ -435,18 +481,24 @@ connection.onSignatureHelp(async (params) => {
 
     if (
       callExpression !== undefined &&
-      callExpression.callee.type === "Identifier"
+      callExpression.callee.type === "Identifier" &&
+      callExpression.closeParenToken !== undefined
     ) {
       const callee = callExpression.callee as ast.Identifier
       const name = callee.token.value
       const [symbol] = findSymbol(
         document,
+        callExpression,
         name,
         "Macro",
         documents,
+        documentASTs,
         documentSymbols,
         documentImports
       )
+      if (!symbol) {
+        return
+      }
 
       const parameters = (symbol.token as ast.Macro).args
         .map(argToParameterInformation)
@@ -456,7 +508,7 @@ connection.onSignatureHelp(async (params) => {
         .getText(
           lsp.Range.create(
             document.positionAt(callee.token.end + 1),
-            document.positionAt(callExpression.closeParenToken!.start)
+            document.positionAt(callExpression.closeParenToken.start)
           )
         )
         .trimEnd()
