@@ -19,6 +19,7 @@ import {
   macroToSignature,
   SymbolInfo,
 } from "./symbols"
+import { getType, resolveType } from "./types"
 import { parentOfType, tokenAt, walk } from "./utilities"
 
 const ReadFileRequest = new lsp.RequestType<
@@ -249,12 +250,47 @@ connection.onHover(async (params) => {
       } satisfies lsp.Hover
     }
 
+    const callExpression = parentOfType(token, "CallExpression") as
+      | ast.CallExpression
+      | undefined
+
     // Function
     if (
       token.parent?.type === "Identifier" &&
-      token.parent.parent?.type === "CallExpression" &&
-      (token.parent.parent as ast.CallExpression).callee === token.parent
+      callExpression !== undefined &&
+      (callExpression.callee === token.parent ||
+        (callExpression.callee.type === "MemberExpression" &&
+          (callExpression.callee as ast.MemberExpression).property ===
+            token.parent))
     ) {
+      // Expression with known function type
+      const callee = (callExpression as ast.CallExpression).callee
+      const resolvedType = getType(
+        callee,
+        document,
+        documents,
+        documentASTs,
+        documentSymbols,
+        documentImports
+      )
+      if (resolvedType?.signature !== undefined) {
+        const contents: lsp.MarkedString[] = [
+          {
+            language: "python",
+            // TODO: arguments
+            value: `() -> ${
+              resolveType(resolvedType.signature.return)?.name ?? "None"
+            }`,
+          },
+        ]
+        if (resolvedType.signature.documentation) {
+          contents.push(resolvedType.signature.documentation)
+        }
+        return {
+          contents,
+        } satisfies lsp.Hover
+      }
+
       // Global Function
       if (globals[token.value]) {
         return {
@@ -368,11 +404,23 @@ connection.onHover(async (params) => {
         symbol.token.assignee.type === "Identifier"
       ) {
         if (symbol.token.value) {
+          const symbolType = getType(
+            symbol.token?.value,
+            document,
+            documents,
+            documentASTs,
+            documentSymbols,
+            documentImports
+          )
+          const typeString =
+            symbolType !== undefined ? `: ${symbolType.name}` : ""
           return {
             contents: [
               {
-                language: "jinja",
-                value: formatExpression(symbol.token.value),
+                language: "python",
+                value: `${identifier.value}${typeString} = ${formatExpression(
+                  symbol.token.value
+                )}`,
               },
             ],
           } satisfies lsp.Hover
@@ -402,7 +450,7 @@ connection.onDefinition(async (params) => {
       callExpression !== undefined &&
       callExpression.callee.type === "Identifier"
     ) {
-      const name = (callExpression.callee as ast.Identifier).token.value
+      const name = (callExpression.callee as ast.Identifier).value
       const [symbol, symbolDocument] = findSymbol(
         document,
         callExpression,

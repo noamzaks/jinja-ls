@@ -40,7 +40,7 @@ export const collectSymbols = (
   } else if (statement.type === "Set") {
     const setStatement = statement as ast.SetStatement
     if (setStatement.assignee.type === "Identifier") {
-      const variable = (setStatement.assignee as ast.Identifier).token.value
+      const variable = (setStatement.assignee as ast.Identifier).value
       addSymbol(variable, {
         type: "Variable",
         token: setStatement,
