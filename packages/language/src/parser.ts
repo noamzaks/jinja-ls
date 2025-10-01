@@ -1080,6 +1080,7 @@ export function parse(
     return operand
   }
 
+  const primaryExpressionMissingNodes = new Set<number>()
   function parsePrimaryExpression(): Statement {
     // Primary expression: number, string, identifier, function call, parenthesized expression
     const token = current >= tokens.length ? undefined : tokens[current++]
@@ -1144,7 +1145,11 @@ export function parse(
         )
       }
       default:
-        current--
+        // Make sure to break from infinite loops, if parsePrimaryExpression is called twice for this token we don't want to continue trying.
+        if (!primaryExpressionMissingNodes.has(current)) {
+          current--
+        }
+        primaryExpressionMissingNodes.add(current)
         return createMissingNode(
           "expression",
           token ?? tokens[tokens.length - 1]

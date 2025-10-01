@@ -713,14 +713,15 @@ connection.onCompletion(async (params) => {
 
   if (program !== undefined && document !== undefined) {
     const offset = document.offsetAt(params.position)
-    const token = tokenAt(program, offset - 1)
+    const token = tokenAt(program, offset)
     if (!token) {
       return
     }
 
-    if (token.parent instanceof ast.Expression) {
+    if (token.parent?.type === "MemberExpression") {
+      const object = (token.parent as ast.MemberExpression).object
       const symbolType = getType(
-        token.parent,
+        object,
         document,
         documents,
         documentASTs,
