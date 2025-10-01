@@ -229,6 +229,17 @@ export const isInScope = (
   inScopeOf: ast.Node | undefined,
   program: ast.Program | undefined
 ) => {
+  const scopeStart = inScopeOf?.getStart?.()
+  const nodeStart = node.getStart()
+  if (
+    scopeStart !== undefined &&
+    nodeStart !== undefined &&
+    scopeStart < nodeStart
+  ) {
+    // Defined afterwards.
+    return false
+  }
+
   const symbolScope = getScope(node)
   let currentScope = getScope(inScopeOf) ?? program
   if (currentScope !== undefined) {
@@ -381,11 +392,7 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
 
   // TODO: remove sorting here
   const symbolOptions = (symbols?.get(name) ?? []).sort(
-    (a, b) =>
-      // @ts-ignore
-      (a.node?.name?.token?.start ?? a.node?.openToken?.start) -
-      // @ts-ignore
-      (b.node?.name?.token?.start ?? b.node?.openToken?.start)
+    (a, b) => (a.node?.getStart() ?? 0) - (b.node?.getStart() ?? 0)
   )
 
   // Look from the last to the first definition of this symbol to find the last one.

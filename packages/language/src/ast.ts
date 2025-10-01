@@ -26,20 +26,22 @@ export class Node {
     this.children.push(child)
   }
 
-  getStart() {
-    return Math.min(
-      ...this.children
-        .filter((x) => x instanceof TokenNode)
-        .map((token) => token.start)
-    )
+  getStart(): number | undefined {
+    const starts = this.children
+      .map((token) => token.getStart())
+      .filter((x) => x !== undefined)
+    if (starts.length !== 0) {
+      return Math.min(...starts)
+    }
   }
 
-  getEnd() {
-    return Math.max(
-      ...this.children
-        .filter((x) => x instanceof TokenNode)
-        .map((token) => token.end)
-    )
+  getEnd(): number | undefined {
+    const ends = this.children
+      .map((token) => token.getEnd())
+      .filter((x) => x !== undefined)
+    if (ends.length !== 0) {
+      return Math.min(...ends)
+    }
   }
 }
 
@@ -59,6 +61,14 @@ export class TokenNode extends Node {
   }
 
   get end() {
+    return this.token.end
+  }
+
+  override getStart() {
+    return this.token.start
+  }
+
+  override getEnd() {
     return this.token.end
   }
 }
