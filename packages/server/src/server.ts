@@ -215,11 +215,9 @@ connection.onHover(async (params) => {
         contents: [
           {
             language: "python",
-            value: `(filter) def ${token.value}(${filters[
-              token.value
-            ].parameters
+            value: `(${filters[token.value].parameters
               .map((p) => (p.default ? `${p.name}=${p.default}` : p.name))
-              .join(", ")})`,
+              .join(", ")}) -> Any`,
           },
           filters[token.value].brief,
         ],
@@ -237,9 +235,9 @@ connection.onHover(async (params) => {
         contents: [
           {
             language: "python",
-            value: `(test) def ${token.value}(${tests[token.value].parameters
+            value: `(${tests[token.value].parameters
               .map((p) => (p.default ? `${p.name}=${p.default}` : p.name))
-              .join(", ")})`,
+              .join(", ")}) -> bool`,
           },
           tests[token.value].brief,
         ],
@@ -682,6 +680,36 @@ connection.onCompletion(async (params) => {
     const token = tokenAt(program, offset)
     if (!token) {
       return
+    }
+
+    if (
+      token.parent?.parent?.type === "TestExpression" &&
+      (token.parent.parent as ast.TestExpression).test === token.parent
+    ) {
+      return Object.entries(tests).map(
+        ([testName, test]) =>
+          ({
+            label: testName,
+            kind: lsp.CompletionItemKind.Function,
+            documentation: test.brief,
+          } satisfies lsp.CompletionItem)
+      )
+    }
+
+    if (
+      token.parent?.type === "Identifier" &&
+      token.parent?.parent?.type === "FilterExpression" &&
+      (token.parent.parent as ast.FilterExpression).filter.identifierName ===
+        (token.parent as ast.Identifier).value
+    ) {
+      return Object.entries(filters).map(
+        ([filterName, filter]) =>
+          ({
+            label: filterName,
+            kind: lsp.CompletionItemKind.Function,
+            documentation: filter.brief,
+          } satisfies lsp.CompletionItem)
+      )
     }
 
     if (token.parent?.type === "MemberExpression") {
