@@ -734,6 +734,11 @@ connection.onCompletion(async (params) => {
         for (const [key, value] of Object.entries(
           symbolType.properties ?? {}
         )) {
+          // Don't show array indexing as properties
+          if (!isNaN(parseInt(key, 10))) {
+            continue
+          }
+
           let kind: lsp.CompletionItemKind | undefined = undefined
           let documentation: lsp.MarkupContent | undefined = undefined
           const resolvedType = resolveType(value)
