@@ -364,4 +364,60 @@ export const BUILTIN_TYPES: Record<string, TypeInfo> = {
       real: "float",
     },
   },
+  bool: {
+    name: "bool",
+    properties: {
+      as_integer_ratio: {
+        name: "as_integer_ratio",
+        signature: {
+          documentation:
+            "Return a pair of integers, whose ratio is equal to the original int.",
+        },
+      },
+      bit_count: {
+        name: "bit_count",
+        signature: {
+          documentation:
+            "Number of ones in the binary representation of the absolute value of self.",
+        },
+      },
+      bit_length: {
+        name: "bit_length",
+        signature: {
+          documentation:
+            "Number of bits necessary to represent self in binary.",
+        },
+      },
+      conjugate: {
+        name: "conjugate",
+        signature: {
+          documentation: "Returns self, the complex conjugate of any int.",
+        },
+      },
+      denominator: "int",
+      from_bytes: {
+        name: "from_bytes",
+        signature: {
+          documentation:
+            "Return the integer represented by the given array of bytes.",
+        },
+      },
+      imag: "int",
+      is_integer: {
+        name: "is_integer",
+        signature: {
+          documentation:
+            "Returns True. Exists for duck type compatibility with float.is_integer.",
+        },
+      },
+      numerator: "int",
+      real: "int",
+      to_bytes: {
+        name: "to_bytes",
+        signature: {
+          documentation: "Return an array of bytes representing an integer.",
+        },
+      },
+    },
+  },
 }

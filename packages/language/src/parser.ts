@@ -337,13 +337,7 @@ export function parse(
   }
 
   function parseImportContext(): Identifier | undefined {
-    if (
-      tokens[current].type === "Identifier" &&
-      (tokens[current].value === "with" ||
-        tokens[current].value === "without") &&
-      tokens[current + 1]?.type === "Identifier" &&
-      tokens[current + 1]?.value === "context"
-    ) {
+    if (isIdentifier("with", "context") || isIdentifier("without", "context")) {
       const result = new Identifier(
         tokens[current].value,
         new TokenNode(
@@ -362,7 +356,22 @@ export function parse(
 
   function parseIncludeStatement(): Include | MissingNode {
     const name = parseExpression()
-    const result = new Include(name, parseImportContext())
+    let ignoreMissing: Identifier | undefined
+    if (isIdentifier("ignore", "missing")) {
+      ignoreMissing = new Identifier(
+        "ignore missing",
+        new TokenNode(
+          new Token(
+            "ignore missing",
+            TOKEN_TYPES.Identifier,
+            tokens[current].start,
+            tokens[current + 1].end
+          )
+        )
+      )
+      current += 2
+    }
+    const result = new Include(name, ignoreMissing, parseImportContext())
     result.addChild(
       new TokenNode(expect(TOKEN_TYPES.CloseStatement)),
       "closeToken"

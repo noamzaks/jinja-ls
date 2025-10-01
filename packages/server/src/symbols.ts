@@ -2,17 +2,40 @@ import { ast, formatExpression, LexerError } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { URI, Utils } from "vscode-uri"
+import { getType, resolveType, TypeInfo } from "./types"
+import { parentOfType } from "./utilities"
 
 export type SymbolInfo =
   | {
       type: "Macro"
-      token: ast.Macro
+      node: ast.Macro
     }
   | {
       type: "Block"
-      token: ast.Block
+      node: ast.Block
     }
-  | { type: "Variable"; token: ast.SetStatement }
+  | {
+      type: "Variable"
+      node: ast.SetStatement | ast.Macro | ast.For | ast.Block | ast.Program
+      identifierNode?: ast.Identifier
+      getType: (
+        document: TextDocument,
+        documents: Map<string, TextDocument>,
+        documentASTs: Map<
+          string,
+          {
+            program?: ast.Program
+            lexerErrors?: LexerError[]
+            parserErrors?: ast.ErrorNode[]
+          }
+        >,
+        documentSymbols: Map<string, Map<string, SymbolInfo[]>>,
+        documentImports: Map<
+          string,
+          (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
+        >
+      ) => TypeInfo | undefined
+    }
 
 export const collectSymbols = (
   statement: ast.Node,
@@ -29,21 +52,85 @@ export const collectSymbols = (
     const macroStatement = statement as ast.Macro
     addSymbol(macroStatement.name.value, {
       type: "Macro",
-      token: macroStatement,
+      node: macroStatement,
     })
+    addSymbol(macroStatement.name.value, {
+      type: "Variable",
+      node: macroStatement,
+      identifierNode: macroStatement.name,
+      getType: () => ({
+        name: "macro",
+        properties: {
+          name: "str",
+          arguments: {
+            name: "tuple",
+            properties: Object.fromEntries(
+              macroStatement.args.map((arg, index) => [index.toString(), "str"])
+            ),
+          },
+          catch_kwargs: "bool",
+          catch_varargs: "bool",
+          caller: "bool",
+        },
+      }),
+    })
+    for (const argument of macroStatement.args) {
+      addSymbol(argument.identifierName!, {
+        type: "Variable",
+        node: macroStatement,
+        identifierNode:
+          argument.type === "Identifier"
+            ? (argument as ast.Identifier)
+            : (argument as ast.KeywordArgumentExpression).key,
+        getType: (
+          document,
+          documents,
+          documentASTs,
+          documentSymbols,
+          documentImports
+        ) =>
+          argument.type === "KeywordArgumentExpression"
+            ? getType(
+                (argument as ast.KeywordArgumentExpression).value,
+                document,
+                documents,
+                documentASTs,
+                documentSymbols,
+                documentImports
+              )
+            : undefined,
+      })
+    }
   } else if (statement.type === "Block") {
     const blockStatement = statement as ast.Block
     addSymbol(blockStatement.name.value, {
       type: "Block",
-      token: blockStatement,
+      node: blockStatement,
     })
   } else if (statement.type === "Set") {
     const setStatement = statement as ast.SetStatement
     if (setStatement.assignee.type === "Identifier") {
-      const variable = (setStatement.assignee as ast.Identifier).value
+      const variableIdentifier = setStatement.assignee as ast.Identifier
+      const variable = variableIdentifier.value
       addSymbol(variable, {
         type: "Variable",
-        token: setStatement,
+        node: setStatement,
+        identifierNode: variableIdentifier,
+        getType: (
+          document,
+          documents,
+          documentASTs,
+          documentSymbols,
+          documentImports
+        ) =>
+          getType(
+            setStatement.value,
+            document,
+            documents,
+            documentASTs,
+            documentSymbols,
+            documentImports
+          ),
       })
     }
   } else if (
@@ -138,6 +225,72 @@ export const isInScope = (
   return false
 }
 
+const SPECIAL_SYMBOLS: Record<
+  string,
+  Record<string, string | TypeInfo | undefined>
+> = {
+  // These are the globals.
+  Program: {
+    true: "bool",
+    false: "bool",
+    none: "None",
+    True: "bool",
+    False: "bool",
+    None: "None",
+  },
+  Macro: {
+    varargs: "tuple",
+    kwargs: "dict",
+    caller: {
+      name: "function",
+      signature: {
+        return: "str",
+      },
+    },
+  },
+  For: {
+    loop: {
+      name: "loop",
+      properties: {
+        index: "int",
+        index0: "int",
+        revindex: "int",
+        revindex0: "int",
+        first: "bool",
+        last: "bool",
+        length: "int",
+        depth: "int",
+        depth0: "int",
+        previtem: "unknown",
+        nextitem: "unknown",
+        cycle: {
+          name: "function",
+          signature: {
+            documentation:
+              "A helper function to cycle between a list of sequences.",
+          },
+        },
+        changed: {
+          name: "function",
+          signature: {
+            return: "bool",
+            documentation:
+              "True if previously called with a different value (or not called at all).",
+          },
+        },
+      },
+    },
+  },
+  Block: {
+    super: {
+      name: "super",
+      signature: {
+        return: "str",
+      },
+    },
+  },
+}
+
 export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
   symbols: Map<string, SymbolInfo[]> | undefined,
   name: string,
@@ -145,13 +298,30 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
   program: ast.Program | undefined,
   inScopeOf: ast.Node | undefined = undefined
 ): Extract<SymbolInfo, { type: K }> | undefined => {
+  if (type === "Variable") {
+    for (const [definerType, specialSymbols] of Object.entries(
+      SPECIAL_SYMBOLS
+    )) {
+      const parent = parentOfType(inScopeOf, definerType)
+      if (specialSymbols[name] !== undefined && parent !== undefined) {
+        return {
+          type: "Variable",
+          node: parent as ast.Macro | ast.For | ast.Block | ast.Program,
+          identifierNode:
+            parent.type === "Macro" ? (parent as ast.Macro).name : undefined,
+          getType: () => resolveType(specialSymbols[name]),
+        } as unknown as Extract<SymbolInfo, { type: K }>
+      }
+    }
+  }
+
   // TODO: remove sorting here
   const symbolOptions = (symbols?.get(name) ?? []).sort(
     (a, b) =>
       // @ts-ignore
-      (a.token?.name?.token?.start ?? a.token.openToken.start) -
+      (a.node?.name?.token?.start ?? a.node?.openToken?.start) -
       // @ts-ignore
-      (b.token?.name?.token?.start ?? b.token.openToken?.start)
+      (b.node?.name?.token?.start ?? b.node?.openToken?.start)
   )
 
   // Look from the last to the first definition of this symbol to find the last one.
@@ -159,10 +329,10 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
     if (symbol?.type !== type) {
       continue
     }
-    if (!symbol.token) {
+    if (!symbol.node) {
       continue
     }
-    if (!isInScope(symbol.token, inScopeOf, program)) {
+    if (!isInScope(symbol.node, inScopeOf, program)) {
       continue
     }
     return symbol as Extract<SymbolInfo, { type: K }>

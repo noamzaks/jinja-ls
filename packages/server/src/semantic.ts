@@ -136,6 +136,14 @@ export const getTokens = (statements: ast.Statement[]) => {
             tokenModifiers: 0,
           })
         }
+        if (includeStatement.ignoreMissing) {
+          items.push({
+            start: includeStatement.ignoreMissing.token.start,
+            end: includeStatement.ignoreMissing.token.end,
+            tokenType: 8,
+            tokenModifiers: 0,
+          })
+        }
         break
       case "FromImport":
         const fromImportStatement = statement as ast.FromImport

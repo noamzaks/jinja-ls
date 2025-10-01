@@ -109,20 +109,23 @@ export const getType = (
         documentSymbols,
         documentImports
       )
-      const memberType = (objectType?.properties ?? {})[
-        (
-          memberExpression.property as
-            | ast.StringLiteral
-            | ast.Identifier
-            | ast.IntegerLiteral
-        ).value.toString()
-      ]
-      if (memberType) {
+      let propertyName = (
+        memberExpression.property as
+          | ast.StringLiteral
+          | ast.Identifier
+          | ast.IntegerLiteral
+      ).value
+      if (typeof propertyName === "number" && propertyName < 0) {
+        propertyName =
+          Object.keys(objectType?.properties ?? {}).length + propertyName
+      }
+      const memberType = (objectType?.properties ?? {})[propertyName.toString()]
+      if (memberType !== undefined) {
         return resolveType(memberType)
       }
     }
   } else if (expression.type === "Identifier") {
-    const [symbol] = findSymbol(
+    const [symbol, symbolDocument] = findSymbol(
       document,
       expression,
       (expression as ast.Identifier).value,
@@ -132,10 +135,9 @@ export const getType = (
       documentSymbols,
       documentImports
     )
-    if (symbol?.token !== undefined && symbol.token.value !== null) {
-      return getType(
-        symbol.token.value,
-        document,
+    if (symbol !== undefined && symbolDocument !== undefined) {
+      return symbol.getType(
+        symbolDocument,
         documents,
         documentASTs,
         documentSymbols,
@@ -146,5 +148,11 @@ export const getType = (
 }
 
 export const stringifySignatureInfo = (s: SignatureInfo) => {
-  return `() -> ${resolveType(s.return)?.name ?? "None"}`
+  // TODO: arguments
+  let signature = "()"
+  const returnName = resolveType(s.return)?.name
+  if (returnName) {
+    signature += " -> " + returnName
+  }
+  return signature
 }

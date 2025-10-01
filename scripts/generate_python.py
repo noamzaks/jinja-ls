@@ -39,7 +39,7 @@ def get_types(objects: List[Any]):
 
 
 if __name__ == "__main__":
-    builtin_types = get_types(["hello", 1, 1.1])
+    builtin_types = get_types(["hello", 1, 1.1, False])
     output_file = Path("packages/server/src/builtinTypes.ts")
     output_file.write_text(
         f"""import type {{ TypeInfo }} from "./types"\n\nexport const BUILTIN_TYPES: Record<string, TypeInfo> = {json.dumps(builtin_types)}"""

@@ -82,7 +82,8 @@ export class Statement extends Node {
     public identifier: TokenNode | undefined = undefined,
     public closerOpenToken: TokenNode | undefined = undefined,
     public closerCloseToken: TokenNode | undefined = undefined,
-    public closerIdentifier: TokenNode | undefined = undefined
+    public closerIdentifier: TokenNode | undefined = undefined,
+    public identifierName: string | undefined = undefined
   ) {
     super()
     this.addChildren(
@@ -229,6 +230,7 @@ export class Include extends Statement {
 
   constructor(
     public source: Expression,
+    public ignoreMissing: Identifier | undefined,
     public context: Identifier | undefined
   ) {
     super()
@@ -344,6 +346,7 @@ export class Identifier extends Expression {
    */
   constructor(public value: string, public token: TokenNode) {
     super()
+    this.identifierName = value
     this.addChildren(token)
   }
 }
@@ -552,6 +555,7 @@ export class KeywordArgumentExpression extends Expression {
     public equalsToken: TokenNode
   ) {
     super()
+    this.identifierName = key.value
     this.addChildren(key, equalsToken, value)
   }
 }

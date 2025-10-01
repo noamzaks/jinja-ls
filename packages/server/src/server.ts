@@ -1,10 +1,4 @@
-import {
-  ast,
-  formatExpression,
-  LexerError,
-  parse,
-  tokenize,
-} from "@jinja-ls/language"
+import { ast, LexerError, parse, tokenize } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { createConnection } from "vscode-languageserver/node"
@@ -322,8 +316,8 @@ connection.onHover(async (params) => {
       if (
         symbol !== undefined &&
         symbolDocument !== undefined &&
-        symbol.token.openToken !== undefined &&
-        symbol.token.closeToken !== undefined
+        symbol.node.openToken !== undefined &&
+        symbol.node.closeToken !== undefined
       ) {
         return {
           contents: [
@@ -331,8 +325,8 @@ connection.onHover(async (params) => {
               language: "jinja",
               value: symbolDocument.getText(
                 lsp.Range.create(
-                  symbolDocument.positionAt(symbol.token.openToken.start),
-                  symbolDocument.positionAt(symbol.token.closeToken.end)
+                  symbolDocument.positionAt(symbol.node.openToken.start),
+                  symbolDocument.positionAt(symbol.node.closeToken.end)
                 )
               ),
             },
@@ -359,7 +353,7 @@ connection.onHover(async (params) => {
         documentImports,
         { checkCurrent: false, importTypes: ["Extends"] }
       )
-      const sourceBlock = blockSymbol?.token as ast.Block | undefined
+      const sourceBlock = blockSymbol?.node as ast.Block | undefined
       if (
         blockSymbol !== undefined &&
         blockDocument !== undefined &&
@@ -386,46 +380,29 @@ connection.onHover(async (params) => {
 
     if (token.parent?.type === "Identifier") {
       const identifier = token.parent as ast.Identifier
-      const [symbol, symbolDocument] = findSymbol(
+      const node =
+        identifier.parent?.type === "MemberExpression" &&
+        (identifier.parent as ast.MemberExpression).property === identifier
+          ? (identifier.parent as ast.MemberExpression)
+          : identifier
+      const nodeType = getType(
+        node,
         document,
-        identifier,
-        identifier.value,
-        "Variable",
         documents,
         documentASTs,
         documentSymbols,
         documentImports
       )
 
-      if (
-        symbol !== undefined &&
-        symbolDocument !== undefined &&
-        symbol.token.openToken !== undefined &&
-        symbol.token.closeToken !== undefined &&
-        symbol.token.assignee.type === "Identifier"
-      ) {
-        if (symbol.token.value) {
-          const symbolType = getType(
-            symbol.token?.value,
-            document,
-            documents,
-            documentASTs,
-            documentSymbols,
-            documentImports
-          )
-          const typeString =
-            symbolType !== undefined ? `: ${symbolType.name}` : ""
-          return {
-            contents: [
-              {
-                language: "python",
-                value: `${identifier.value}${typeString} = ${formatExpression(
-                  symbol.token.value
-                )}`,
-              },
-            ],
-          } satisfies lsp.Hover
-        }
+      if (nodeType !== undefined) {
+        return {
+          contents: [
+            {
+              language: "python",
+              value: `${identifier.value}: ${nodeType.name}`,
+            },
+          ],
+        } satisfies lsp.Hover
       }
     }
   }
@@ -467,8 +444,8 @@ connection.onDefinition(async (params) => {
         return lsp.Location.create(
           symbolDocument.uri,
           lsp.Range.create(
-            symbolDocument.positionAt(symbol.token.name.token.start),
-            symbolDocument.positionAt(symbol.token.name.token.end)
+            symbolDocument.positionAt(symbol.node.name.token.start),
+            symbolDocument.positionAt(symbol.node.name.token.end)
           )
         )
       }
@@ -534,8 +511,8 @@ connection.onDefinition(async (params) => {
           lsp.LocationLink.create(
             sourceBlockDocument.uri,
             lsp.Range.create(
-              document.positionAt(sourceBlock.token.name.token.start),
-              document.positionAt(sourceBlock.token.name.token.end)
+              document.positionAt(sourceBlock.node.name.token.start),
+              document.positionAt(sourceBlock.node.name.token.end)
             ),
             lsp.Range.create(
               document.positionAt(blockStatement.name.token.start),
@@ -566,21 +543,14 @@ connection.onDefinition(async (params) => {
       if (
         symbol !== undefined &&
         symbolDocument !== undefined &&
-        symbol.token.openToken !== undefined &&
-        symbol.token.closeToken !== undefined &&
-        symbol.token.assignee.type === "Identifier"
+        symbol.identifierNode !== undefined
       ) {
-        const assignee = symbol.token.assignee as ast.Identifier
         return [
-          lsp.LocationLink.create(
+          lsp.Location.create(
             symbolDocument.uri,
             lsp.Range.create(
-              symbolDocument.positionAt(symbol.token.openToken.start),
-              symbolDocument.positionAt(symbol.token.closeToken.end)
-            ),
-            lsp.Range.create(
-              symbolDocument.positionAt(assignee.token.start),
-              symbolDocument.positionAt(assignee.token.end)
+              symbolDocument.positionAt(symbol.identifierNode.token.start),
+              symbolDocument.positionAt(symbol.identifierNode.token.end)
             )
           ),
         ]
@@ -623,7 +593,7 @@ connection.onSignatureHelp(async (params) => {
           documentImports
         )
         if (macro) {
-          const parameters = (macro.token as ast.Macro).args
+          const parameters = (macro.node as ast.Macro).args
             .map(argToParameterInformation)
             .filter((x) => x !== undefined)
 
@@ -669,7 +639,7 @@ connection.onSignatureHelp(async (params) => {
           return {
             signatures: [
               lsp.SignatureInformation.create(
-                macroToSignature(macro.token as ast.Macro),
+                macroToSignature(macro.node as ast.Macro),
                 undefined,
                 ...parameters
               ),
@@ -739,7 +709,7 @@ connection.onCompletion(async (params) => {
             continue
           }
 
-          let kind: lsp.CompletionItemKind | undefined = undefined
+          let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Property
           let documentation: lsp.MarkupContent | undefined = undefined
           const resolvedType = resolveType(value)
           if (resolvedType?.signature) {
@@ -749,8 +719,10 @@ connection.onCompletion(async (params) => {
               value:
                 "```python\n" +
                 stringifySignatureInfo(resolvedType.signature) +
-                "\n```\n" +
-                resolvedType.signature.documentation,
+                "\n```" +
+                (resolvedType.signature.documentation !== undefined
+                  ? "\n" + resolvedType.signature.documentation
+                  : ""),
             }
           }
           completions.push({ label: key, kind, documentation })
