@@ -402,13 +402,17 @@ connection.onHover(async (params) => {
         if (nodeType.literalValue !== undefined) {
           value += ` = ${nodeType.literalValue}`
         }
+        const contents: lsp.MarkedString[] = [
+          {
+            language: "python",
+            value,
+          },
+        ]
+        if (nodeType.documentation) {
+          contents.push(nodeType.documentation)
+        }
         return {
-          contents: [
-            {
-              language: "python",
-              value,
-            },
-          ],
+          contents,
         } satisfies lsp.Hover
       }
     }
@@ -699,21 +703,20 @@ connection.onCompletion(async (params) => {
 
     if (token.parent?.type === "MemberExpression") {
       const object = (token.parent as ast.MemberExpression).object
-      const symbolType = resolveType(
-        getType(
-          object,
-          document,
-          documents,
-          documentASTs,
-          documentSymbols,
-          documentImports
-        )
+      const symbolType = getType(
+        object,
+        document,
+        documents,
+        documentASTs,
+        documentSymbols,
+        documentImports
       )
+      const resolvedType = resolveType(symbolType)
 
-      if (symbolType !== undefined) {
+      if (resolvedType !== undefined) {
         const completions: lsp.CompletionItem[] = []
         for (const [key, value] of Object.entries(
-          symbolType.properties ?? {}
+          resolvedType.properties ?? {}
         )) {
           // Don't show array indexing as properties
           if (!isNaN(parseInt(key, 10))) {
@@ -721,20 +724,24 @@ connection.onCompletion(async (params) => {
           }
 
           let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Property
-          let documentation: lsp.MarkupContent | undefined = undefined
-          const resolvedType = resolveType(value)
-          if (resolvedType?.signature) {
+          let documentation: lsp.MarkupContent | string | undefined = undefined
+          const valueType = resolveType(value)
+          if (valueType?.signature) {
             kind = lsp.CompletionItemKind.Method
+            const docs =
+              valueType?.signature?.documentation ?? symbolType?.documentation
             documentation = {
               kind: "markdown",
               value:
                 "```python\n" +
-                stringifySignatureInfo(resolvedType.signature) +
+                stringifySignatureInfo(valueType.signature) +
                 "\n```" +
-                (resolvedType.signature.documentation !== undefined
-                  ? "\n" + resolvedType.signature.documentation
-                  : ""),
+                (docs !== undefined ? "\n" + docs : ""),
             }
+            // @ts-ignore
+          } else if (value?.documentation) {
+            // @ts-ignore
+            documentation = value.documentation
           }
           completions.push({ label: key, kind, documentation })
         }

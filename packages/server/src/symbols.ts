@@ -61,9 +61,11 @@ export const collectSymbols = (
       getType: () => ({
         name: "macro",
         properties: {
-          name: "str",
+          name: { type: "str", documentation: "The name of the macro." },
           arguments: {
             name: "tuple",
+            documentation:
+              "A tuple of the names of arguments the macro accepts.",
             properties: Object.fromEntries(
               macroStatement.args.map((arg, index) => [
                 index.toString(),
@@ -74,9 +76,21 @@ export const collectSymbols = (
               ])
             ),
           },
-          catch_kwargs: "bool",
-          catch_varargs: "bool",
-          caller: "bool",
+          catch_kwargs: {
+            type: "bool",
+            documentation:
+              "This is true if the macro accepts extra keyword arguments (i.e.: accesses the special kwargs variable).",
+          },
+          catch_varargs: {
+            type: "bool",
+            documentation:
+              "This is true if the macro accepts extra positional arguments (i.e.: accesses the special varargs variable).",
+          },
+          caller: {
+            type: "bool",
+            documentation:
+              "This is true if the macro accesses the special caller variable and may be called from a call tag.",
+          },
         },
       }),
     })
@@ -233,7 +247,7 @@ export const isInScope = (
 
 const SPECIAL_SYMBOLS: Record<
   string,
-  Record<string, string | TypeInfo | undefined>
+  Record<string, string | TypeReference | TypeInfo | undefined>
 > = {
   // These are the globals.
   Program: {
@@ -245,12 +259,22 @@ const SPECIAL_SYMBOLS: Record<
     None: "None",
   },
   Macro: {
-    varargs: "tuple",
-    kwargs: "dict",
+    varargs: {
+      type: "tuple",
+      documentation:
+        "If more positional arguments are passed to the macro than accepted by the macro, they end up in the special varargs variable as a list of values.",
+    },
+    kwargs: {
+      type: "dict",
+      documentation:
+        "Like varargs but for keyword arguments. All unconsumed keyword arguments are stored in this special variable.",
+    },
     caller: {
       name: "function",
       signature: {
         return: "str",
+        documentation:
+          "If the macro was called from a call tag, the caller is stored in this variable as a callable macro.",
       },
     },
   },
@@ -258,17 +282,50 @@ const SPECIAL_SYMBOLS: Record<
     loop: {
       name: "loop",
       properties: {
-        index: "int",
-        index0: "int",
-        revindex: "int",
-        revindex0: "int",
-        first: "bool",
-        last: "bool",
-        length: "int",
-        depth: "int",
-        depth0: "int",
-        previtem: "unknown",
-        nextitem: "unknown",
+        index: {
+          type: "int",
+          documentation: "The current iteration of the loop. (1 indexed)",
+        },
+        index0: {
+          type: "int",
+          documentation: "The current iteration of the loop. (0 indexed)",
+        },
+        revindex: {
+          type: "int",
+          documentation:
+            "The number of iterations from the end of the loop (1 indexed)",
+        },
+        revindex0: {
+          type: "int",
+          documentation:
+            "The number of iterations from the end of the loop (0 indexed)",
+        },
+        first: { type: "bool", documentation: "True if first iteration." },
+        last: { type: "bool", documentation: "True if last iteration." },
+        length: {
+          type: "int",
+          documentation: "The number of items in the sequence.",
+        },
+        depth: {
+          type: "int",
+          documentation:
+            "Indicates how deep in a recursive loop the rendering currently is. Starts at level 1",
+        },
+        depth0: {
+          type: "int",
+          documentation:
+            "Indicates how deep in a recursive loop the rendering currently is. Starts at level 0",
+        },
+        previtem: {
+          type: "unknown",
+          documentation:
+            "The item from the previous iteration of the loop. Undefined during the first iteration.",
+        },
+        nextitem: {
+          type: "unknown",
+          documentation:
+            "The item from the following iteration of the loop. Undefined during the last iteration.",
+        },
         cycle: {
           name: "function",
           signature: {
@@ -292,6 +349,7 @@ const SPECIAL_SYMBOLS: Record<
       name: "super",
       signature: {
         return: "str",
+        documentation: "The results of the parent block.",
       },
     },
   },
