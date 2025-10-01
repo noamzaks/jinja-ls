@@ -1,5 +1,6 @@
 import { ast, LexerError } from "@jinja-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
+import { BUILTIN_TYPES } from "./builtinTypes"
 import { findSymbol, SymbolInfo } from "./symbols"
 
 export interface ParameterInfo {
@@ -18,32 +19,7 @@ export interface TypeInfo {
   // If the type is callable, this is its signature.
   name: string
   signature?: SignatureInfo
-  properties?: Map<string, TypeInfo | string>
-}
-
-export const BUILTIN_TYPES: Record<string, TypeInfo> = {
-  str: {
-    name: "str",
-    properties: new Map([
-      [
-        "upper",
-        {
-          name: "upper",
-          signature: {
-            return: "str",
-            documentation:
-              "Return a copy of the string converted to uppercase.",
-          },
-        },
-      ],
-    ]),
-  },
-  int: {
-    name: "int",
-  },
-  float: {
-    name: "float",
-  },
+  properties?: Record<string, TypeInfo | string | undefined>
 }
 
 export const resolveType = (type: string | TypeInfo | undefined) => {
@@ -54,7 +30,7 @@ export const resolveType = (type: string | TypeInfo | undefined) => {
 }
 
 export const getType = (
-  expression: ast.Expression | undefined,
+  expression: ast.Expression | undefined | null,
   document: TextDocument,
   documents: Map<string, TextDocument>,
   documentASTs: Map<
@@ -81,22 +57,66 @@ export const getType = (
     return resolveType("int")
   } else if (expression.type === "FloatLiteral") {
     return resolveType("float")
+  } else if (
+    expression.type === "ArrayLiteral" ||
+    expression.type === "TupleLiteral"
+  ) {
+    const arrayOrTuple = expression as ast.ArrayLiteral | ast.TupleLiteral
+    return {
+      name: expression.type === "ArrayLiteral" ? "list" : "tuple",
+      properties: Object.fromEntries(
+        arrayOrTuple.value.map((expression, index) => [
+          index.toString(),
+          getType(
+            expression,
+            document,
+            documents,
+            documentASTs,
+            documentSymbols,
+            documentImports
+          ),
+        ])
+      ),
+    }
+  } else if (expression.type === "ObjectLiteral") {
+    const objectLiteral = expression as ast.ObjectLiteral
+    const properties: Record<string, TypeInfo | string | undefined> = {}
+    for (const [key, value] of objectLiteral.value.entries()) {
+      if (key.type === "StringLiteral") {
+        properties[(key as ast.StringLiteral).value] = getType(
+          value,
+          document,
+          documents,
+          documentASTs,
+          documentSymbols,
+          documentImports
+        )
+      }
+    }
+    return { name: "dict", properties }
   } else if (expression.type === "MemberExpression") {
     const memberExpression = expression as ast.MemberExpression
     if (
       memberExpression.property.type === "StringLiteral" ||
-      memberExpression.property.type === "Identifier"
+      memberExpression.property.type === "Identifier" ||
+      memberExpression.property.type === "IntegerLiteral"
     ) {
-      const memberType = getType(
+      const objectType = getType(
         memberExpression.object,
         document,
         documents,
         documentASTs,
         documentSymbols,
         documentImports
-      )?.properties?.get(
-        (memberExpression.property as ast.StringLiteral | ast.Identifier).value
       )
+      const memberType = (objectType?.properties ?? {})[
+        (
+          memberExpression.property as
+            | ast.StringLiteral
+            | ast.Identifier
+            | ast.IntegerLiteral
+        ).value.toString()
+      ]
       if (memberType) {
         return resolveType(memberType)
       }
@@ -123,4 +143,8 @@ export const getType = (
       )
     }
   }
+}
+
+export const stringifySignatureInfo = (s: SignatureInfo) => {
+  return `() -> ${resolveType(s.return)?.name ?? "None"}`
 }

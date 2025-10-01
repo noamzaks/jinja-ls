@@ -973,25 +973,32 @@ export function parse(
   function parseMemberExpression(object: Statement): Statement {
     while (is(TOKEN_TYPES.Dot) || is(TOKEN_TYPES.OpenSquareBracket)) {
       const operator = tokens[current] // . or [
+      let closeBracket: TokenNode | undefined = undefined
       ++current
       let property: Statement
       const computed = operator.type === TOKEN_TYPES.OpenSquareBracket
       if (computed) {
         // computed (i.e., bracket notation: obj[expr])
         property = parseMemberExpressionArgumentsList()
-        expect(TOKEN_TYPES.CloseSquareBracket)
+        closeBracket = new TokenNode(expect(TOKEN_TYPES.CloseSquareBracket))
       } else {
         // non-computed (i.e., dot notation: obj.expr)
         const propertyStart = current
         property = parsePrimaryExpression() // should be an identifier
         if (property.type !== "Identifier") {
-          return createMissingNode(
+          property = createMissingNode(
             "identifier for member expression",
             tokens[propertyStart]
           )
         }
       }
-      object = new MemberExpression(object, property, computed)
+      object = new MemberExpression(
+        object,
+        property,
+        computed,
+        new TokenNode(operator),
+        closeBracket
+      )
     }
     return object
   }

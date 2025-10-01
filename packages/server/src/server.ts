@@ -19,7 +19,7 @@ import {
   macroToSignature,
   SymbolInfo,
 } from "./symbols"
-import { getType, resolveType } from "./types"
+import { getType, resolveType, stringifySignatureInfo } from "./types"
 import { parentOfType, tokenAt, walk } from "./utilities"
 
 const ReadFileRequest = new lsp.RequestType<
@@ -65,6 +65,9 @@ connection.onInitialize((params) => {
       definitionProvider: true,
       signatureHelpProvider: {
         triggerCharacters: ["(", ",", "="],
+      },
+      completionProvider: {
+        triggerCharacters: ["."],
       },
     },
   } satisfies lsp.InitializeResult
@@ -278,9 +281,7 @@ connection.onHover(async (params) => {
           {
             language: "python",
             // TODO: arguments
-            value: `() -> ${
-              resolveType(resolvedType.signature.return)?.name ?? "None"
-            }`,
+            value: stringifySignatureInfo(resolvedType.signature),
           },
         ]
         if (resolvedType.signature.documentation) {
@@ -603,81 +604,153 @@ connection.onSignatureHelp(async (params) => {
       | ast.CallExpression
       | undefined
 
-    if (
-      callExpression !== undefined &&
-      callExpression.callee.type === "Identifier" &&
-      callExpression.closeParenToken !== undefined
-    ) {
-      const callee = callExpression.callee as ast.Identifier
-      const name = callee.token.value
-      const [symbol] = findSymbol(
+    if (callExpression !== undefined) {
+      if (
+        callExpression.callee.type === "Identifier" &&
+        callExpression.closeParenToken !== undefined
+      ) {
+        const callee = callExpression.callee as ast.Identifier
+        const name = callee.token.value
+
+        const [macro] = findSymbol(
+          document,
+          callExpression,
+          name,
+          "Macro",
+          documents,
+          documentASTs,
+          documentSymbols,
+          documentImports
+        )
+        if (macro) {
+          const parameters = (macro.token as ast.Macro).args
+            .map(argToParameterInformation)
+            .filter((x) => x !== undefined)
+
+          const currentCallText = document
+            .getText(
+              lsp.Range.create(
+                document.positionAt(callee.token.end + 1),
+                document.positionAt(callExpression.closeParenToken.start)
+              )
+            )
+            .trimEnd()
+          let activeParameter = 0
+          const lastPeriod = currentCallText.lastIndexOf(
+            ",",
+            document.offsetAt(params.position) - callee.token.end - 2
+          )
+          const nextPeriod = currentCallText.indexOf(",", lastPeriod + 1)
+          const currentParameter = currentCallText.slice(
+            lastPeriod + 1,
+            nextPeriod === -1 ? undefined : nextPeriod
+          )
+          const previousParameters = currentCallText.slice(0, lastPeriod + 1)
+          // TODO: this could also appear inside a string
+          const equalIndex = currentParameter.indexOf("=")
+          if (equalIndex !== -1) {
+            activeParameter = parameters.findIndex(
+              (parameter) =>
+                parameter.label === currentParameter.slice(0, equalIndex).trim()
+            )
+          } else if (!previousParameters.includes("=")) {
+            for (const c of currentCallText.slice(
+              0,
+              nextPeriod === -1 ? undefined : nextPeriod
+            )) {
+              if (c === ",") {
+                activeParameter++
+              }
+            }
+          } else {
+            activeParameter = -1
+          }
+
+          return {
+            signatures: [
+              lsp.SignatureInformation.create(
+                macroToSignature(macro.token as ast.Macro),
+                undefined,
+                ...parameters
+              ),
+            ],
+            activeSignature: 0,
+            activeParameter,
+          } satisfies lsp.SignatureHelp
+        }
+      }
+
+      const symbolType = getType(
+        callExpression.callee,
         document,
-        callExpression,
-        name,
-        "Macro",
         documents,
         documentASTs,
         documentSymbols,
         documentImports
       )
-      if (!symbol) {
-        return
+      if (symbolType?.signature !== undefined) {
+        return {
+          signatures: [
+            lsp.SignatureInformation.create(
+              stringifySignatureInfo(symbolType.signature),
+              symbolType.signature.documentation
+              // TODO
+              // ...parameters
+            ),
+          ],
+          activeSignature: 0,
+          // TODO
+          // activeParameter,
+        } satisfies lsp.SignatureHelp
       }
+    }
+  }
+})
 
-      const parameters = (symbol.token as ast.Macro).args
-        .map(argToParameterInformation)
-        .filter((x) => x !== undefined)
+connection.onCompletion(async (params) => {
+  const document = documents.get(params.textDocument.uri)
+  const program = documentASTs.get(params.textDocument.uri)?.program
 
-      const currentCallText = document
-        .getText(
-          lsp.Range.create(
-            document.positionAt(callee.token.end + 1),
-            document.positionAt(callExpression.closeParenToken.start)
-          )
-        )
-        .trimEnd()
-      let activeParameter = 0
-      const lastPeriod = currentCallText.lastIndexOf(
-        ",",
-        document.offsetAt(params.position) - callee.token.end - 2
+  if (program !== undefined && document !== undefined) {
+    const offset = document.offsetAt(params.position)
+    const token = tokenAt(program, offset - 1)
+    if (!token) {
+      return
+    }
+
+    if (token.parent instanceof ast.Expression) {
+      const symbolType = getType(
+        token.parent,
+        document,
+        documents,
+        documentASTs,
+        documentSymbols,
+        documentImports
       )
-      const nextPeriod = currentCallText.indexOf(",", lastPeriod + 1)
-      const currentParameter = currentCallText.slice(
-        lastPeriod + 1,
-        nextPeriod === -1 ? undefined : nextPeriod
-      )
-      const previousParameters = currentCallText.slice(0, lastPeriod + 1)
-      // TODO: this could also appear inside a string
-      const equalIndex = currentParameter.indexOf("=")
-      if (equalIndex !== -1) {
-        activeParameter = parameters.findIndex(
-          (parameter) =>
-            parameter.label === currentParameter.slice(0, equalIndex).trim()
-        )
-      } else if (!previousParameters.includes("=")) {
-        for (const c of currentCallText.slice(
-          0,
-          nextPeriod === -1 ? undefined : nextPeriod
+
+      if (symbolType !== undefined) {
+        const completions: lsp.CompletionItem[] = []
+        for (const [key, value] of Object.entries(
+          symbolType.properties ?? {}
         )) {
-          if (c === ",") {
-            activeParameter++
+          let kind: lsp.CompletionItemKind | undefined = undefined
+          let documentation: lsp.MarkupContent | undefined = undefined
+          const resolvedType = resolveType(value)
+          if (resolvedType?.signature) {
+            kind = lsp.CompletionItemKind.Method
+            documentation = {
+              kind: "markdown",
+              value:
+                "```python\n" +
+                stringifySignatureInfo(resolvedType.signature) +
+                "\n```\n" +
+                resolvedType.signature.documentation,
+            }
           }
+          completions.push({ label: key, kind, documentation })
         }
-      } else {
-        activeParameter = -1
+        return completions
       }
-
-      return {
-        signatures: [
-          lsp.SignatureInformation.create(
-            macroToSignature(symbol.token as ast.Macro),
-            undefined,
-            ...parameters
-          ),
-        ],
-        activeSignature: 0,
-        activeParameter,
-      } satisfies lsp.SignatureHelp
     }
   }
 })

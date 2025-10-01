@@ -310,10 +310,12 @@ export class MemberExpression extends Expression {
   constructor(
     public object: Expression,
     public property: Expression,
-    public computed: boolean
+    public computed: boolean,
+    public openToken: TokenNode, // '[' or '.'
+    public closeBracketToken: TokenNode | undefined
   ) {
     super()
-    this.addChildren(object, property)
+    this.addChildren(object, property, openToken, closeBracketToken)
   }
 }
 
