@@ -145,7 +145,7 @@ export const collectSymbols = (
       const loopvarIdentifier = forStatement.loopvar as ast.Identifier
       addSymbol(loopvarIdentifier.value, {
         type: "Variable",
-        node: forStatement,
+        node: forStatement.loopvar,
         identifierNode: loopvarIdentifier,
         // TODO
         getType: () => undefined,
@@ -157,7 +157,7 @@ export const collectSymbols = (
           const loopvarTupleItemIdentifier = loopvarTupleItem as ast.Identifier
           addSymbol(loopvarTupleItemIdentifier.value, {
             type: "Variable",
-            node: forStatement,
+            node: forStatement.loopvar,
             identifierNode: loopvarTupleItemIdentifier,
             // TODO
             getType: () => undefined,
