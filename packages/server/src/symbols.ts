@@ -16,7 +16,7 @@ export type SymbolInfo =
     }
   | {
       type: "Variable"
-      node: ast.SetStatement | ast.Macro | ast.For | ast.Block | ast.Program
+      node: ast.Node
       identifierNode?: ast.Identifier
       getType: (
         document: TextDocument,
@@ -92,12 +92,14 @@ export const collectSymbols = (
               "This is true if the macro accesses the special caller variable and may be called from a call tag.",
           },
         },
+        signature: {},
       }),
     })
     for (const argument of macroStatement.args) {
       addSymbol(argument.identifierName!, {
         type: "Variable",
-        node: macroStatement,
+        // Scoped to be inside the macro
+        node: macroStatement.name,
         identifierNode:
           argument.type === "Identifier"
             ? (argument as ast.Identifier)
@@ -127,6 +129,32 @@ export const collectSymbols = (
       type: "Block",
       node: blockStatement,
     })
+  } else if (statement.type === "For") {
+    const forStatement = statement as ast.For
+    if (forStatement.loopvar.type === "Identifier") {
+      const loopvarIdentifier = forStatement.loopvar as ast.Identifier
+      addSymbol(loopvarIdentifier.value, {
+        type: "Variable",
+        node: forStatement,
+        identifierNode: loopvarIdentifier,
+        // TODO
+        getType: () => undefined,
+      })
+    } else {
+      const loopvarTuple = forStatement.loopvar as ast.TupleLiteral
+      for (const loopvarTupleItem of loopvarTuple.value) {
+        if (loopvarTupleItem.type === "Identifier") {
+          const loopvarTupleItemIdentifier = loopvarTupleItem as ast.Identifier
+          addSymbol(loopvarTupleItemIdentifier.value, {
+            type: "Variable",
+            node: forStatement,
+            identifierNode: loopvarTupleItemIdentifier,
+            // TODO
+            getType: () => undefined,
+          })
+        }
+      }
+    }
   } else if (statement.type === "Set") {
     const setStatement = statement as ast.SetStatement
     if (setStatement.assignee.type === "Identifier") {
@@ -212,8 +240,12 @@ export const importToUri = (
   ).toString()
 }
 
-export const getScope = (node: ast.Node | undefined) => {
-  if (node?.type === "Block" && (node as ast.Block).scoped === undefined) {
+export const getScope = (node: ast.Node | undefined, initial = false) => {
+  if (
+    !initial &&
+    node?.type === "Block" &&
+    (node as ast.Block).scoped === undefined
+  ) {
     return
   }
 
@@ -240,8 +272,8 @@ export const isInScope = (
     return false
   }
 
-  const symbolScope = getScope(node)
-  let currentScope = getScope(inScopeOf) ?? program
+  const symbolScope = getScope(node, true)
+  let currentScope = getScope(inScopeOf, true) ?? program
   if (currentScope !== undefined) {
     while (currentScope !== undefined) {
       if (currentScope === symbolScope) {
@@ -410,6 +442,93 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
   }
 }
 
+export const getImportedSymbols = <K extends SymbolInfo["type"]>(
+  inScopeOf: ast.Node | undefined,
+  type: K,
+  document: TextDocument,
+  documents: Map<string, TextDocument>,
+  documentASTs: Map<
+    string,
+    {
+      program?: ast.Program
+      lexerErrors?: LexerError[]
+      parserErrors?: ast.ErrorNode[]
+    }
+  >,
+  documentSymbols: Map<string, Map<string, SymbolInfo[]>>,
+  documentImports: Map<
+    string,
+    (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
+  >,
+  importTypes?: string[]
+) => {
+  const imports = documentImports.get(document.uri)
+  const program = documentASTs.get(document.uri)?.program
+
+  const symbols = new Map<
+    string,
+    [Extract<SymbolInfo, { type: K }>, TextDocument]
+  >()
+  if (program === undefined) {
+    return symbols
+  }
+
+  for (const importStatement of imports ?? []) {
+    if (
+      importTypes !== undefined &&
+      !importTypes.includes(importStatement.type)
+    ) {
+      continue
+    }
+
+    if (!isInScope(importStatement, inScopeOf, program)) {
+      continue
+    }
+
+    const importedUri = importToUri(importStatement, document.uri)
+    if (!importedUri) {
+      continue
+    }
+    const importedDocument = documents.get(importedUri)
+    if (!importedDocument) {
+      continue
+    }
+
+    const importedSymbols = documentSymbols.get(importedUri)
+    if (importStatement.type === "Import") {
+      const i = importStatement as ast.Import
+      // TODO: return a symbol containing all symbols from the imported document?
+    } else if (importStatement.type === "FromImport") {
+      for (const fromImport of (importStatement as ast.FromImport).imports) {
+        const symbolName = (fromImport.name ?? fromImport.source).value
+        const symbolValue = findSymbolInDocument(
+          importedSymbols,
+          fromImport.source.value,
+          type,
+          documentASTs.get(importedUri)?.program
+        )
+        if (symbolValue !== undefined) {
+          symbols.set(symbolName, [symbolValue, importedDocument])
+        }
+      }
+    } else {
+      for (const symbolName of importedSymbols?.keys() ?? []) {
+        const symbolValue = findSymbolInDocument(
+          importedSymbols,
+          symbolName,
+          type,
+          documentASTs.get(importedUri)?.program
+        )
+        if (symbolValue !== undefined) {
+          symbols.set(symbolName, [symbolValue, importedDocument])
+        }
+      }
+    }
+  }
+
+  return symbols
+}
+
 export const findSymbol = <K extends SymbolInfo["type"]>(
   document: TextDocument,
   inScopeOf: ast.Node | undefined,
@@ -451,60 +570,96 @@ export const findSymbol = <K extends SymbolInfo["type"]>(
     }
   }
 
-  const imports = documentImports.get(document.uri)
-  for (const importStatement of imports ?? []) {
-    if (
-      importTypes !== undefined &&
-      !importTypes.includes(importStatement.type)
-    ) {
-      continue
-    }
+  const importedSymbols = getImportedSymbols(
+    inScopeOf,
+    type,
+    document,
+    documents,
+    documentASTs,
+    documentSymbols,
+    documentImports,
+    importTypes
+  )
+  return importedSymbols.get(name) ?? []
+}
 
-    if (!isInScope(importStatement, inScopeOf, program)) {
-      continue
+export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
+  node: ast.Node,
+  type: K,
+  document: TextDocument,
+  documents: Map<string, TextDocument>,
+  documentASTs: Map<
+    string,
+    {
+      program?: ast.Program
+      lexerErrors?: LexerError[]
+      parserErrors?: ast.ErrorNode[]
     }
+  >,
+  documentSymbols: Map<string, Map<string, SymbolInfo[]>>,
+  documentImports: Map<
+    string,
+    (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
+  >
+): Map<string, [Extract<SymbolInfo, { type: K }>, TextDocument]> => {
+  const result = new Map<
+    string,
+    [Extract<SymbolInfo, { type: K }>, TextDocument]
+  >()
 
-    const importedUri = importToUri(importStatement, document.uri)
-    if (!importedUri) {
-      continue
-    }
-    const importedDocument = documents.get(importedUri)
-    if (!importedDocument) {
-      continue
-    }
-
-    const symbols = documentSymbols.get(importedUri)
-    let symbol: Extract<SymbolInfo, { type: K }> | undefined = undefined
-    if (importStatement.type === "Import") {
-      const i = importStatement as ast.Import
-      if (i.name.value === name) {
-        // TODO: return a symbol containing all symbols from the imported document?
+  const program = documentASTs.get(document.uri)?.program
+  const symbols = documentSymbols.get(document.uri)
+  if (program !== undefined && symbols !== undefined) {
+    for (const [symbolName, symbolValues] of symbols.entries() ?? []) {
+      for (const value of symbolValues) {
+        if (value.type === type && isInScope(value.node, node, program)) {
+          result.set(symbolName, [
+            value as unknown as Extract<SymbolInfo, { type: K }>,
+            document,
+          ])
+          break
+        }
       }
-    } else if (importStatement.type === "FromImport") {
-      const importedSymbol = (importStatement as ast.FromImport).imports.find(
-        (i) => (i.name ?? i.source).value === name
-      )
-      if (importedSymbol !== undefined) {
-        symbol = findSymbolInDocument(
-          symbols,
-          importedSymbol.source.value,
-          type,
-          documentASTs.get(importedUri)?.program
-        )
-      }
-    } else {
-      symbol = findSymbolInDocument(
-        symbols,
-        name,
-        type,
-        documentASTs.get(importedUri)?.program
-      )
-    }
-
-    if (symbol !== undefined) {
-      return [symbol, importedDocument]
     }
   }
 
-  return []
+  const importedSymbols = getImportedSymbols(
+    node,
+    type,
+    document,
+    documents,
+    documentASTs,
+    documentSymbols,
+    documentImports
+  )
+
+  for (const [key, value] of importedSymbols.entries()) {
+    result.set(key, value)
+  }
+
+  if (type === "Variable") {
+    for (const [definerType, specialSymbols] of Object.entries(
+      SPECIAL_SYMBOLS
+    )) {
+      const parent = parentOfType(node, definerType)
+      if (parent !== undefined) {
+        for (const symbolName in specialSymbols) {
+          result.set(symbolName, [
+            {
+              type: "Variable",
+              node: parent as ast.Macro | ast.For | ast.Block | ast.Program,
+              identifierNode:
+                parent.type === "Macro"
+                  ? (parent as ast.Macro).name
+                  : undefined,
+              getType: () => specialSymbols[symbolName],
+            } as unknown as Extract<SymbolInfo, { type: K }>,
+            document,
+          ])
+        }
+      }
+    }
+  }
+
+  return result
 }

@@ -9,6 +9,7 @@ import {
   argToParameterInformation,
   collectSymbols,
   findSymbol,
+  findSymbolsInScope,
   importToUri,
   macroToSignature,
   SymbolInfo,
@@ -504,10 +505,14 @@ connection.onDefinition(async (params) => {
 
     const blockStatement = parentOfType(token, "Block") as ast.Block | undefined
 
-    if (blockStatement !== undefined && imports !== undefined) {
+    if (
+      blockStatement !== undefined &&
+      blockStatement.name === token.parent &&
+      imports !== undefined
+    ) {
       const [sourceBlock, sourceBlockDocument] = findSymbol(
         document,
-        undefined,
+        blockStatement,
         blockStatement.name.value,
         "Block",
         documents,
@@ -519,19 +524,11 @@ connection.onDefinition(async (params) => {
 
       if (sourceBlock !== undefined && sourceBlockDocument !== undefined) {
         return [
-          lsp.LocationLink.create(
+          lsp.Location.create(
             sourceBlockDocument.uri,
             lsp.Range.create(
-              document.positionAt(sourceBlock.node.name.token.start),
-              document.positionAt(sourceBlock.node.name.token.end)
-            ),
-            lsp.Range.create(
-              document.positionAt(blockStatement.name.token.start),
-              document.positionAt(blockStatement.name.token.end)
-            ),
-            lsp.Range.create(
-              document.positionAt(blockStatement.name.token.start),
-              document.positionAt(blockStatement.name.token.end)
+              sourceBlockDocument.positionAt(sourceBlock.node.name.token.start),
+              sourceBlockDocument.positionAt(sourceBlock.node.name.token.end)
             )
           ),
         ]
@@ -747,6 +744,39 @@ connection.onCompletion(async (params) => {
         }
         return completions
       }
+    } else if (token.parent !== undefined) {
+      const symbols = findSymbolsInScope(
+        token.parent,
+        "Variable",
+        document,
+        documents,
+        documentASTs,
+        documentSymbols,
+        documentImports
+      )
+      const completions: lsp.CompletionItem[] = []
+      for (const [symbolName, [symbol, document]] of symbols.entries()) {
+        const type = symbol?.getType(
+          document,
+          documents,
+          documentASTs,
+          documentSymbols,
+          documentImports
+        )
+        const resolvedType = resolveType(type)
+        let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Variable
+        if (type !== undefined && resolvedType !== undefined) {
+          if (resolvedType.signature !== undefined) {
+            kind = lsp.CompletionItemKind.Function
+          }
+        }
+
+        completions.push({
+          label: symbolName,
+          kind,
+        })
+      }
+      return completions
     }
   }
 })

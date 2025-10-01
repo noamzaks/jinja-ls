@@ -154,6 +154,21 @@ export const getType = (
         return memberType
       }
     }
+  } else if (expression.type === "CallExpression") {
+    const callExpression = expression as ast.CallExpression
+    const calleeType = resolveType(
+      getType(
+        callExpression.callee,
+        document,
+        documents,
+        documentASTs,
+        documentSymbols,
+        documentImports
+      )
+    )
+    if (calleeType?.signature !== undefined) {
+      return resolveType(calleeType.signature.return)
+    }
   } else if (expression.type === "Identifier") {
     const [symbol, symbolDocument] = findSymbol(
       document,
