@@ -568,9 +568,41 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
     }
 
     const importedSymbols = documentSymbols.get(importedUri)
-    if (importStatement.type === "Import") {
+    const importedAST = documentASTs.get(importedUri)?.program
+    if (!importedAST) {
+      continue
+    }
+
+    if (importStatement.type === "Import" && type === "Variable") {
       const i = importStatement as ast.Import
-      // TODO: return a symbol containing all symbols from the imported document?
+      symbols.set(i.name.value, [
+        {
+          type: "Variable",
+          node: importedAST,
+          getType: () => {
+            const typeInfo: TypeInfo = { name: "namespace", properties: {} }
+            for (const symbolName of importedSymbols?.keys() ?? []) {
+              const symbolValue = findSymbolInDocument(
+                importedSymbols,
+                symbolName,
+                "Variable",
+                importedAST
+              )
+              if (symbolValue !== undefined) {
+                typeInfo.properties![symbolName] = symbolValue.getType(
+                  importedDocument,
+                  documents,
+                  documentASTs,
+                  documentSymbols,
+                  documentImports
+                )
+              }
+            }
+            return typeInfo
+          },
+        } as unknown as Extract<SymbolInfo, { type: K }>,
+        importedDocument,
+      ])
     } else if (importStatement.type === "FromImport") {
       for (const fromImport of (importStatement as ast.FromImport).imports) {
         const symbolName = (fromImport.name ?? fromImport.source).value
@@ -578,7 +610,7 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
           importedSymbols,
           fromImport.source.value,
           type,
-          documentASTs.get(importedUri)?.program
+          importedAST
         )
         if (symbolValue !== undefined) {
           symbols.set(symbolName, [symbolValue, importedDocument])
@@ -590,7 +622,7 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
           importedSymbols,
           symbolName,
           type,
-          documentASTs.get(importedUri)?.program
+          importedAST
         )
         if (symbolValue !== undefined) {
           symbols.set(symbolName, [symbolValue, importedDocument])
