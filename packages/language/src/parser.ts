@@ -1103,7 +1103,7 @@ export function parse(
     switch (token?.type) {
       case TOKEN_TYPES.NumericLiteral: {
         const num = token.value
-        return num.includes(".")
+        return num.includes(".") || num.includes("e")
           ? new FloatLiteral(Number(num), new TokenNode(token))
           : new IntegerLiteral(Number(num), new TokenNode(token))
       }

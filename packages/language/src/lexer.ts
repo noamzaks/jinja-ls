@@ -437,6 +437,14 @@ export function tokenize(
     if (isInteger(char)) {
       // Consume integer part
       let num = consumeWhile(isInteger)
+      // Skip _ as long as there is some integer after it
+      while (
+        source[cursorPosition] === "_" &&
+        isInteger(source[cursorPosition + 1])
+      ) {
+        cursorPosition++
+        num += consumeWhile(isInteger)
+      }
       // Possibly, consume fractional part
       if (
         source[cursorPosition] === "." &&
@@ -444,7 +452,19 @@ export function tokenize(
       ) {
         ++cursorPosition // consume '.'
         const frac = consumeWhile(isInteger)
+
         num = `${num}.${frac}`
+      }
+      if (
+        source[cursorPosition] === "e" &&
+        (isInteger(source[cursorPosition + 1]) ||
+          source[cursorPosition + 1] === "-" ||
+          source[cursorPosition + 1] === "+" ||
+          isInteger(source[cursorPosition + 2]))
+      ) {
+        num += source[cursorPosition] + source[cursorPosition + 1]
+        cursorPosition += 2
+        num += consumeWhile(isInteger)
       }
       tokens.push(createToken(num, TOKEN_TYPES.NumericLiteral))
       continue
