@@ -1,4 +1,4 @@
-import { ast, LexerError } from "@jinja-ls/language"
+import { ast, formatExpression, LexerError } from "@jinja-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { BUILTIN_TYPES } from "./builtinTypes"
 import { findSymbol, SymbolInfo } from "./symbols"
@@ -11,7 +11,7 @@ export interface ParameterInfo {
 
 export interface SignatureInfo {
   arguments?: [ParameterInfo]
-  return?: TypeInfo | string
+  return?: TypeInfo | TypeReference | string
   documentation?: string
 }
 
@@ -19,14 +19,31 @@ export interface TypeInfo {
   // If the type is callable, this is its signature.
   name: string
   signature?: SignatureInfo
-  properties?: Record<string, TypeInfo | string | undefined>
+  properties?: Record<string, TypeInfo | string | TypeReference | undefined>
+  // If the value is known
+  literalValue?: string
+  documentation?: string
 }
 
-export const resolveType = (type: string | TypeInfo | undefined) => {
+export interface TypeReference {
+  // Should be in BUILTIN_TYPES
+  type: string
+  literalValue?: string
+  documentation?: string
+}
+
+export const resolveType = (
+  type: string | TypeInfo | TypeReference | undefined
+) => {
   if (typeof type === "string") {
     return BUILTIN_TYPES[type]
   }
-  return type
+  // @ts-ignore
+  if (type?.type) {
+    // @ts-ignore
+    return BUILTIN_TYPES[type.type]
+  }
+  return type as TypeInfo | undefined
 }
 
 export const getType = (
@@ -46,17 +63,17 @@ export const getType = (
     string,
     (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
   >
-): TypeInfo | undefined => {
+): TypeInfo | TypeReference | undefined => {
   if (!expression) {
     return
   }
 
   if (expression.type === "StringLiteral") {
-    return resolveType("str")
+    return { type: "str", literalValue: formatExpression(expression) }
   } else if (expression.type === "IntegerLiteral") {
-    return resolveType("int")
+    return { type: "int", literalValue: formatExpression(expression) }
   } else if (expression.type === "FloatLiteral") {
-    return resolveType("float")
+    return { type: "float", literalValue: formatExpression(expression) }
   } else if (
     expression.type === "ArrayLiteral" ||
     expression.type === "TupleLiteral"
@@ -77,10 +94,14 @@ export const getType = (
           ),
         ])
       ),
+      literalValue: formatExpression(expression),
     }
   } else if (expression.type === "ObjectLiteral") {
     const objectLiteral = expression as ast.ObjectLiteral
-    const properties: Record<string, TypeInfo | string | undefined> = {}
+    const properties: Record<
+      string,
+      TypeInfo | TypeReference | string | undefined
+    > = {}
     for (const [key, value] of objectLiteral.value.entries()) {
       if (key.type === "StringLiteral") {
         properties[(key as ast.StringLiteral).value] = getType(
@@ -93,7 +114,11 @@ export const getType = (
         )
       }
     }
-    return { name: "dict", properties }
+    return {
+      name: "dict",
+      properties,
+      literalValue: formatExpression(objectLiteral),
+    }
   } else if (expression.type === "MemberExpression") {
     const memberExpression = expression as ast.MemberExpression
     if (
@@ -101,13 +126,15 @@ export const getType = (
       memberExpression.property.type === "Identifier" ||
       memberExpression.property.type === "IntegerLiteral"
     ) {
-      const objectType = getType(
-        memberExpression.object,
-        document,
-        documents,
-        documentASTs,
-        documentSymbols,
-        documentImports
+      const objectType = resolveType(
+        getType(
+          memberExpression.object,
+          document,
+          documents,
+          documentASTs,
+          documentSymbols,
+          documentImports
+        )
       )
       let propertyName = (
         memberExpression.property as
@@ -121,7 +148,10 @@ export const getType = (
       }
       const memberType = (objectType?.properties ?? {})[propertyName.toString()]
       if (memberType !== undefined) {
-        return resolveType(memberType)
+        if (typeof memberType === "string") {
+          return resolveType(memberType)
+        }
+        return memberType
       }
     }
   } else if (expression.type === "Identifier") {

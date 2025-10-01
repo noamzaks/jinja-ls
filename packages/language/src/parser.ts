@@ -69,7 +69,7 @@ export function parse(
    */
   function expect(type: string): Token {
     if (current >= tokens.length) {
-      createMissingNode(type, tokens[tokens.length - 1])
+      createMissingNode(type)
       return createErrorToken()
     }
 
@@ -84,7 +84,7 @@ export function parse(
 
   function expectIdentifier(name: string): Token {
     if (current >= tokens.length) {
-      createMissingNode(`'${name}'`, tokens[tokens.length - 1])
+      createMissingNode(`'${name}'`)
       return createErrorToken()
     }
 
@@ -98,7 +98,7 @@ export function parse(
 
   function expectCloserStatement(result: Node, name: string) {
     if (current >= tokens.length) {
-      createMissingNode(`'{% ${name} %}'`, tokens[tokens.length - 1])
+      createMissingNode(`'{% ${name} %}'`)
       return
     }
 
@@ -154,8 +154,11 @@ export function parse(
     )
   }
 
-  function createMissingNode(missingType: string, before: Token) {
-    const node = new MissingNode(missingType, before)
+  function createMissingNode(missingType: string, before?: Token | undefined) {
+    const node = new MissingNode(
+      missingType,
+      before ?? tokens[tokens.length - 1]
+    )
     errors.push(node)
     return node
   }
@@ -172,11 +175,14 @@ export function parse(
   }
 
   function eatUntil(type: string, includingEnd = true) {
-    while (tokens[current]?.type !== type) {
+    while (current < tokens.length && tokens[current]?.type !== type) {
       current++
     }
-    if (includingEnd) {
+    if (tokens[current]?.type === type && includingEnd) {
       current++
+    }
+    if (current === tokens.length) {
+      createMissingNode(type)
     }
   }
 
@@ -186,13 +192,13 @@ export function parse(
     let closeToken: Token | undefined = undefined
 
     // next token must be Identifier whose .value tells us which statement
-    if (tokens[current].type !== TOKEN_TYPES.Identifier) {
+    if (tokens[current]?.type !== TOKEN_TYPES.Identifier) {
       const result = createMissingNode("statement name", tokens[current])
       eatUntil(TOKEN_TYPES.CloseStatement)
       return result
     }
     const identifier = tokens[current]
-    const name = tokens[current].value
+    const name = tokens[current]?.value
     let result: Statement
     switch (name) {
       case "raw":
@@ -307,9 +313,11 @@ export function parse(
           `Unexpected statement '${name}'`,
           tokens[current]
         )
-        current--
-        eatUntil(TOKEN_TYPES.CloseStatement, false)
-        result.addChild(new TokenNode(tokens[current++]), "closeToken")
+        if (!name) {
+          current--
+          eatUntil(TOKEN_TYPES.CloseStatement, false)
+          result.addChild(new TokenNode(tokens[current++]), "closeToken")
+        }
         break
     }
     result.addChild(new TokenNode(openToken), "openToken")
@@ -509,7 +517,7 @@ export function parse(
     )
     block.addChild(new TokenNode(closeToken), "closeToken")
     if (current >= tokens.length) {
-      createMissingNode(`'{% endblock %}'`, tokens[tokens.length - 1])
+      createMissingNode(`'{% endblock %}'`)
       return block
     }
 
@@ -1158,10 +1166,7 @@ export function parse(
         primaryExpressionMissingNodes.add(current)
         if (!alreadyCreated) {
           current--
-          return createMissingNode(
-            "expression",
-            token ?? tokens[tokens.length - 1]
-          )
+          return createMissingNode("expression", token)
         }
         return new MissingNode("expression", token ?? tokens[tokens.length - 1])
     }

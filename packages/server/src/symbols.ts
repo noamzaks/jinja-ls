@@ -2,7 +2,7 @@ import { ast, formatExpression, LexerError } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { URI, Utils } from "vscode-uri"
-import { getType, resolveType, TypeInfo } from "./types"
+import { getType, resolveType, TypeInfo, TypeReference } from "./types"
 import { parentOfType } from "./utilities"
 
 export type SymbolInfo =
@@ -34,7 +34,7 @@ export type SymbolInfo =
           string,
           (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
         >
-      ) => TypeInfo | undefined
+      ) => TypeInfo | TypeReference | undefined
     }
 
 export const collectSymbols = (
@@ -65,7 +65,13 @@ export const collectSymbols = (
           arguments: {
             name: "tuple",
             properties: Object.fromEntries(
-              macroStatement.args.map((arg, index) => [index.toString(), "str"])
+              macroStatement.args.map((arg, index) => [
+                index.toString(),
+                {
+                  type: "str",
+                  literalValue: JSON.stringify(arg.identifierName),
+                },
+              ])
             ),
           },
           catch_kwargs: "bool",

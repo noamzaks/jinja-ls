@@ -262,13 +262,15 @@ connection.onHover(async (params) => {
     ) {
       // Expression with known function type
       const callee = (callExpression as ast.CallExpression).callee
-      const resolvedType = getType(
-        callee,
-        document,
-        documents,
-        documentASTs,
-        documentSymbols,
-        documentImports
+      const resolvedType = resolveType(
+        getType(
+          callee,
+          document,
+          documents,
+          documentASTs,
+          documentSymbols,
+          documentImports
+        )
       )
       if (resolvedType?.signature !== undefined) {
         const contents: lsp.MarkedString[] = [
@@ -393,13 +395,18 @@ connection.onHover(async (params) => {
         documentSymbols,
         documentImports
       )
+      const resolvedType = resolveType(nodeType)
 
-      if (nodeType !== undefined) {
+      if (nodeType !== undefined && resolvedType !== undefined) {
+        let value = `${identifier.value}: ${resolvedType.name}`
+        if (nodeType.literalValue !== undefined) {
+          value += ` = ${nodeType.literalValue}`
+        }
         return {
           contents: [
             {
               language: "python",
-              value: `${identifier.value}: ${nodeType.name}`,
+              value,
             },
           ],
         } satisfies lsp.Hover
@@ -650,13 +657,15 @@ connection.onSignatureHelp(async (params) => {
         }
       }
 
-      const symbolType = getType(
-        callExpression.callee,
-        document,
-        documents,
-        documentASTs,
-        documentSymbols,
-        documentImports
+      const symbolType = resolveType(
+        getType(
+          callExpression.callee,
+          document,
+          documents,
+          documentASTs,
+          documentSymbols,
+          documentImports
+        )
       )
       if (symbolType?.signature !== undefined) {
         return {
@@ -690,13 +699,15 @@ connection.onCompletion(async (params) => {
 
     if (token.parent?.type === "MemberExpression") {
       const object = (token.parent as ast.MemberExpression).object
-      const symbolType = getType(
-        object,
-        document,
-        documents,
-        documentASTs,
-        documentSymbols,
-        documentImports
+      const symbolType = resolveType(
+        getType(
+          object,
+          document,
+          documents,
+          documentASTs,
+          documentSymbols,
+          documentImports
+        )
       )
 
       if (symbolType !== undefined) {
