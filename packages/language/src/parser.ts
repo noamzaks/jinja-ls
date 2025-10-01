@@ -172,7 +172,7 @@ export function parse(
   }
 
   function eatUntil(type: string, includingEnd = true) {
-    while (tokens[current].type !== type) {
+    while (tokens[current]?.type !== type) {
       current++
     }
     if (includingEnd) {
@@ -894,7 +894,7 @@ export function parse(
     // comma-separated arguments list
 
     const args = []
-    while (!is(TOKEN_TYPES.CloseParen)) {
+    while (current < tokens.length && !is(TOKEN_TYPES.CloseParen)) {
       let argument: Statement
 
       // unpacking: *expr
@@ -940,10 +940,9 @@ export function parse(
     // NOTE: This also handles slice expressions colon-separated arguments list
     // e.g., ['test'], [0], [:2], [1:], [1:2], [1:2:3]
 
-    const startToken = current - 1
     const slices: (Statement | undefined)[] = []
     let isSlice = false
-    while (!is(TOKEN_TYPES.CloseSquareBracket)) {
+    while (current < tokens.length && !is(TOKEN_TYPES.CloseSquareBracket)) {
       if (is(TOKEN_TYPES.Colon)) {
         // A case where a default is used
         // e.g., [:2] will be parsed as [undefined, 2]
@@ -1118,7 +1117,7 @@ export function parse(
       }
       case TOKEN_TYPES.OpenSquareBracket: {
         const values = []
-        while (!is(TOKEN_TYPES.CloseSquareBracket)) {
+        while (current < tokens.length && !is(TOKEN_TYPES.CloseSquareBracket)) {
           values.push(parseExpression())
 
           if (is(TOKEN_TYPES.Comma)) {
@@ -1135,7 +1134,7 @@ export function parse(
       }
       case TOKEN_TYPES.OpenCurlyBracket: {
         const values = new Map()
-        while (!is(TOKEN_TYPES.CloseCurlyBracket)) {
+        while (current < tokens.length && !is(TOKEN_TYPES.CloseCurlyBracket)) {
           const key = parseExpression()
           expect(TOKEN_TYPES.Colon)
           const value = parseExpression()
@@ -1155,14 +1154,16 @@ export function parse(
       }
       default:
         // Make sure to break from infinite loops, if parsePrimaryExpression is called twice for this token we don't want to continue trying.
-        if (!primaryExpressionMissingNodes.has(current)) {
-          current--
-        }
+        const alreadyCreated = primaryExpressionMissingNodes.has(current)
         primaryExpressionMissingNodes.add(current)
-        return createMissingNode(
-          "expression",
-          token ?? tokens[tokens.length - 1]
-        )
+        if (!alreadyCreated) {
+          current--
+          return createMissingNode(
+            "expression",
+            token ?? tokens[tokens.length - 1]
+          )
+        }
+        return new MissingNode("expression", token ?? tokens[tokens.length - 1])
     }
   }
 
