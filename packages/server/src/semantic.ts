@@ -1,4 +1,4 @@
-import { ast } from "@jinja-ls/language"
+import { ast } from "../../language"
 import * as lsp from "vscode-languageserver"
 export interface SemanticToken {
   start: number

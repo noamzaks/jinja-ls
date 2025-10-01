@@ -1,4 +1,4 @@
-import { ast } from "@jinja-ls/language"
+import { ast } from "../../language"
 
 // TODO: why is this not sorted?
 export const walk = (

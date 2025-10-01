@@ -1,6 +1,6 @@
 {
   "name": "jinja-ls",
-  "description": "VSCode part of a language server",
+  "description": "Feature-rich language server for Jinja.",
   "version": "0.0.1",
   "author": "Noam Zaks <noam@noamzaks.com> (https://noamzaks.com/)",
   "license": "MIT",

@@ -1,8 +1,8 @@
-import { ast, formatExpression, LexerError } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { URI, Utils } from "vscode-uri"
-import { getType, resolveType, TypeInfo, TypeReference } from "./types"
+import { ast, formatExpression, LexerError } from "../../language"
+import { getType, TypeInfo, TypeReference } from "./types"
 import { parentOfType } from "./utilities"
 
 export type SymbolInfo =
@@ -271,12 +271,12 @@ const SPECIAL_SYMBOLS: Record<
   },
   Macro: {
     varargs: {
-      type: "tuple",
+      name: "tuple",
       documentation:
         "If more positional arguments are passed to the macro than accepted by the macro, they end up in the special varargs variable as a list of values.",
     },
     kwargs: {
-      type: "dict",
+      name: "dict",
       documentation:
         "Like varargs but for keyword arguments. All unconsumed keyword arguments are stored in this special variable.",
     },
@@ -384,7 +384,7 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
           node: parent as ast.Macro | ast.For | ast.Block | ast.Program,
           identifierNode:
             parent.type === "Macro" ? (parent as ast.Macro).name : undefined,
-          getType: () => resolveType(specialSymbols[name]),
+          getType: () => specialSymbols[name],
         } as unknown as Extract<SymbolInfo, { type: K }>
       }
     }

@@ -7,7 +7,7 @@
 </h1>
 
 <p align="center">
-    <b>Blazingly fast Jinja language server.</b>
+    <b>Feature-rich language server for Jinja.</b>
 </p>
 
 > [!WARNING]

@@ -1,5 +1,5 @@
-import { ast, formatExpression, LexerError } from "@jinja-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
+import { ast, formatExpression, LexerError } from "../../language"
 import { BUILTIN_TYPES } from "./builtinTypes"
 import { findSymbol, SymbolInfo } from "./symbols"
 
