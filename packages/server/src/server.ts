@@ -3,15 +3,13 @@ import { TextDocument } from "vscode-languageserver-textdocument"
 import { createConnection } from "vscode-languageserver/node"
 import { URI, Utils } from "vscode-uri"
 import { ast, LexerError, parse, tokenize } from "../../language"
-import { filters, globals, tests } from "./generated"
+import { filters, tests } from "./generated"
 import { getTokens, legend } from "./semantic"
 import {
-  argToParameterInformation,
   collectSymbols,
   findSymbol,
   findSymbolsInScope,
   importToUri,
-  macroToSignature,
   SymbolInfo,
 } from "./symbols"
 import { getType, resolveType, stringifySignatureInfo } from "./types"
@@ -286,23 +284,6 @@ connection.onHover(async (params) => {
         }
         return {
           contents,
-        } satisfies lsp.Hover
-      }
-
-      // Global Function
-      if (globals[token.value]) {
-        return {
-          contents: [
-            {
-              language: "python",
-              value: `(global) def ${token.value}(${globals[
-                token.value
-              ].parameters
-                .map((p) => (p.default ? `${p.name}=${p.default}` : p.name))
-                .join(", ")})`,
-            },
-            globals[token.value].brief,
-          ],
         } satisfies lsp.Hover
       }
 
@@ -587,28 +568,33 @@ connection.onSignatureHelp(async (params) => {
         callExpression.callee.type === "Identifier" &&
         callExpression.closeParenToken !== undefined
       ) {
-        const callee = callExpression.callee as ast.Identifier
-        const name = callee.token.value
-
-        const [macro] = findSymbol(
+        const callee = callExpression.callee
+        const symbolType = getType(
+          callee,
           document,
-          callExpression,
-          name,
-          "Macro",
           documents,
           documentASTs,
           documentSymbols,
           documentImports
         )
-        if (macro) {
-          const parameters = (macro.node as ast.Macro).args
-            .map(argToParameterInformation)
-            .filter((x) => x !== undefined)
+        const resolvedType = resolveType(symbolType)
+        const calleeEnd = callee.getEnd()
+
+        if (
+          symbolType !== undefined &&
+          resolvedType?.signature !== undefined &&
+          calleeEnd !== undefined
+        ) {
+          const parameters =
+            resolvedType.signature.arguments?.map(
+              (argument) =>
+                ({ label: argument.name } satisfies lsp.ParameterInformation)
+            ) ?? []
 
           const currentCallText = document
             .getText(
               lsp.Range.create(
-                document.positionAt(callee.token.end + 1),
+                document.positionAt(calleeEnd + 1),
                 document.positionAt(callExpression.closeParenToken.start)
               )
             )
@@ -616,7 +602,7 @@ connection.onSignatureHelp(async (params) => {
           let activeParameter = 0
           const lastPeriod = currentCallText.lastIndexOf(
             ",",
-            document.offsetAt(params.position) - callee.token.end - 2
+            document.offsetAt(params.position) - calleeEnd - 2
           )
           const nextPeriod = currentCallText.indexOf(",", lastPeriod + 1)
           const currentParameter = currentCallText.slice(
@@ -647,7 +633,7 @@ connection.onSignatureHelp(async (params) => {
           return {
             signatures: [
               lsp.SignatureInformation.create(
-                macroToSignature(macro.node as ast.Macro),
+                stringifySignatureInfo(resolvedType.signature),
                 undefined,
                 ...parameters
               ),

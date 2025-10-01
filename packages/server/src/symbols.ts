@@ -1,8 +1,7 @@
-import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { URI, Utils } from "vscode-uri"
 import { ast, formatExpression, LexerError } from "../../language"
-import { getType, TypeInfo, TypeReference } from "./types"
+import { ArgumentInfo, getType, TypeInfo, TypeReference } from "./types"
 import { parentOfType } from "./utilities"
 
 export type SymbolInfo =
@@ -36,6 +35,14 @@ export type SymbolInfo =
         >
       ) => TypeInfo | TypeReference | undefined
     }
+
+export const argToArgumentInfo = (arg: ast.Expression): ArgumentInfo => {
+  if (arg.type === "Identifier") {
+    return { name: arg.identifierName! }
+  }
+  const kwarg = arg as ast.KeywordArgumentExpression
+  return { name: arg.identifierName!, default: formatExpression(kwarg.value) }
+}
 
 export const collectSymbols = (
   statement: ast.Node,
@@ -92,7 +99,10 @@ export const collectSymbols = (
               "This is true if the macro accesses the special caller variable and may be called from a call tag.",
           },
         },
-        signature: {},
+        signature: {
+          arguments: macroStatement.args.map(argToArgumentInfo),
+          return: "str",
+        },
       }),
     })
     for (const argument of macroStatement.args) {
@@ -207,25 +217,6 @@ export const argToPython = (arg: ast.Statement) => {
   }
 }
 
-export const argToParameterInformation = (
-  arg: ast.Statement
-): lsp.ParameterInformation | undefined => {
-  if (arg.type === "Identifier") {
-    const identifier = arg as ast.Identifier
-    return { label: identifier.token.value }
-  } else if (arg.type === "KeywordArgumentExpression") {
-    const kwarg = arg as ast.KeywordArgumentExpression
-    return { label: kwarg.key.token.value }
-  }
-}
-
-export const macroToSignature = (macro: ast.Macro) => {
-  return `(${macro.args
-    .map((arg) => argToPython(arg))
-    .filter((x) => x !== undefined)
-    .join(", ")}) -> str`
-}
-
 export const importToUri = (
   i: ast.Include | ast.Import | ast.FromImport | ast.Extends,
   uri: string
@@ -300,6 +291,88 @@ const SPECIAL_SYMBOLS: Record<
     True: "bool",
     False: "bool",
     None: "None",
+    range: {
+      name: "class",
+      signature: {
+        arguments: [
+          {
+            name: "start",
+            type: "int",
+          },
+          {
+            name: "stop",
+            type: "int",
+          },
+          {
+            name: "step",
+            type: "int",
+          },
+        ],
+        return: "range",
+      },
+    },
+    dict: {
+      name: "class",
+      signature: {
+        documentation:
+          "A convenient alternative to dict literals. {'foo': 'bar'} is the same as dict(foo='bar').",
+        return: "dict",
+      },
+    },
+    lipsum: {
+      name: "function",
+      signature: {
+        documentation: "Generate some lorem ipsum for the template.",
+        arguments: [
+          {
+            name: "html",
+            type: "bool",
+            default: "True",
+          },
+          {
+            name: "min",
+            type: "int",
+            default: "20",
+          },
+          {
+            name: "max",
+            type: "int",
+            default: "100",
+          },
+        ],
+        return: "str",
+      },
+    },
+    cycler: {
+      name: "class",
+      signature: {
+        documentation:
+          "Cycle through values by yield them one at a time, then restarting once the end is reached.",
+      },
+    },
+    joiner: {
+      name: "class",
+      signature: {
+        arguments: [
+          {
+            name: "sep",
+            type: "str",
+            default: '", "',
+          },
+        ],
+        documentation:
+          'A tiny helper that can be used to "join" multiple sections. A joiner is passed a string and will return that string every time it\'s called, except the first time (in which case it returns an empty string).',
+        return: "joiner",
+      },
+    },
+    namespace: {
+      name: "class",
+      signature: {
+        documentation:
+          "A namespace object that can hold arbitrary attributes.  It may be initialized from a dictionary or with keyword arguments.",
+        return: "namespace",
+      },
+    },
   },
   Macro: {
     varargs: {

@@ -3,14 +3,14 @@ import { ast, formatExpression, LexerError } from "../../language"
 import { BUILTIN_TYPES } from "./builtinTypes"
 import { findSymbol, SymbolInfo } from "./symbols"
 
-export interface ParameterInfo {
+export interface ArgumentInfo {
   name: string
   default?: string
-  type: TypeInfo
+  type?: TypeInfo | TypeReference | string
 }
 
 export interface SignatureInfo {
-  arguments?: [ParameterInfo]
+  arguments?: ArgumentInfo[]
   return?: TypeInfo | TypeReference | string
   documentation?: string
 }
@@ -36,7 +36,7 @@ export const resolveType = (
   type: string | TypeInfo | TypeReference | undefined
 ) => {
   if (typeof type === "string") {
-    return BUILTIN_TYPES[type]
+    return BUILTIN_TYPES[type] ?? { name: type }
   }
   // @ts-ignore
   if (type?.type) {
@@ -192,9 +192,23 @@ export const getType = (
   }
 }
 
+export const argumentToString = (argument: ArgumentInfo) => {
+  let result = argument.name
+
+  const typename = resolveType(argument.type)?.name
+  if (typename !== undefined) {
+    result += ": " + typename
+  }
+
+  if (argument.default !== undefined) {
+    result += " = " + argument.default
+  }
+
+  return result
+}
+
 export const stringifySignatureInfo = (s: SignatureInfo) => {
-  // TODO: arguments
-  let signature = "()"
+  let signature = `(${s.arguments?.map(argumentToString).join(", ") ?? ""})`
   const returnName = resolveType(s.return)?.name
   if (returnName) {
     signature += " -> " + returnName
