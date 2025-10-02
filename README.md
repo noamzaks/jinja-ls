@@ -17,23 +17,22 @@
 
 - The [language](./packages/language/) package is based on [@huggingface/jinja](https://github.com/huggingface/huggingface.js/tree/main/packages/jinja), licensed under MIT by Hugging Face.
 - The client is heavily based on [jinjahtml-vscode](https://github.com/samuelcolvin/jinjahtml-vscode), licensed under MIT by Samuel Colvin and other Contributors. In particular, the awesome syntaxes and the language configuration are included with only a few modifications!
-- The overall layout as well as many code samples are taken from Microsoft's [https://github.com/microsoft/vscode-extension-samples/tree/main/lsp-sample](lsp-sample).
-- Some of the Jinja documentation is also provided, and some of the Python documentation as well.
+- The overall layout as well as many code samples are taken from Microsoft's [lsp-sample](https://github.com/microsoft/vscode-extension-samples/tree/main/lsp-sample) licensed under MIT.
+- Some of the Jinja documentation is also provided (licensed under MIT), and some of the Python documentation as well (licensed under zero-clause BSD)
 - Special thank you to Omri for the original idea.
 
 ## Roadmap
 
-- [x] Provide diagnostics
+- [x] Provide diagnostics for lexing and parsing errors
 - [x] Provide semantic highlighting
-- [x] Make lexer and parser more error tolerant
-- [x] Provide hover
-- [x] Provide go to definition
-- [x] Provide signature help
+- [x] Make lexer and parser error tolerant
+- [x] Provide hover for variables and macros
+- [x] Provide go to definition for blocks, macros and variables
+- [x] Provide signature help for macros and globals
 - [x] Resolve imports
-- [x] Provide definitions from imports
-- [x] Track types of expressions
-- [ ] Provide auto-complete
-  - [x] for member expressions
+- [x] Provide symbols from imports
+- [x] Track types of expressions including globals and special symbols
+- [x] Provide auto-complete for built-in tests and filters and variables
 - [ ] Support custom import directories
 - [ ] Provide format document
 - [ ] Provide document symbols
