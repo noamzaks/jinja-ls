@@ -6,13 +6,14 @@
         "lib": [
             "ES2024"
         ],
-        "outDir": "../../../../dist/tests",
+        "outDir": "../../../dist/tests",
         "sourceMap": true,
         "skipLibCheck": true,
         "allowSyntheticDefaultImports": true
     },
     "include": [
-        "..",
+        "../src",
+        "."
     ],
     "exclude": [
         ".vscode-test"

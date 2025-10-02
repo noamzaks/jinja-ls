@@ -35,13 +35,11 @@ export default [
     plugins,
   },
   {
-    input: globSync("packages/client/src/test/*.ts"),
+    input: globSync("packages/client/test/*.ts"),
     output: {
       format: "cjs",
       dir: "dist/tests",
     },
-    plugins: [
-      typescript({ tsconfig: "./packages/client/src/test/tsconfig.json" }),
-    ],
+    plugins: [typescript({ tsconfig: "./packages/client/test/tsconfig.json" })],
   },
 ]

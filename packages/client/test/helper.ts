@@ -15,8 +15,14 @@ export async function activate(docUri: vscode.Uri) {
   await ext.activate()
   try {
     doc = await vscode.workspace.openTextDocument(docUri)
-    editor = await vscode.window.showTextDocument(doc)
-    await sleep(2000) // Wait for server activation
+    if (
+      !vscode.window.visibleTextEditors.some(
+        (editor) => editor.document === doc
+      )
+    ) {
+      editor = await vscode.window.showTextDocument(doc, { preview: false })
+      await sleep(2000) // Wait for server activation
+    }
   } catch (e) {
     console.error(e)
   }
@@ -32,4 +38,12 @@ export const getDocPath = (p: string) => {
 
 export const getDocUri = (p: string) => {
   return vscode.Uri.file(getDocPath(p))
+}
+
+export const rangeToJson = (range: vscode.Range) => {
+  return [positionToJson(range.start), positionToJson(range.end)]
+}
+
+export const positionToJson = (position: vscode.Position) => {
+  return { line: position.line, character: position.character }
 }

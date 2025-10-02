@@ -730,7 +730,8 @@ export function parse(
     ) {
       const missingNode = createMissingNode(
         "identifier/tuple for the loop variable",
-        tokens[loopVariableStart]
+        tokens[loopVariableStart],
+        loopVariable
       )
       eatUntil(TOKEN_TYPES.CloseStatement, "'%}'")
       return missingNode
@@ -922,10 +923,13 @@ export function parse(
   function parseArgs(): [Token, Statement[], Token] {
     // add (x + 5, foo())
     const openToken = expect(TOKEN_TYPES.OpenParen, "'('")
+    let args = []
+    let closeToken = createErrorToken()
+    if (openToken.type !== "Error") {
+      args = parseArgumentsList()
+      closeToken = expect(TOKEN_TYPES.CloseParen, "')'")
+    }
 
-    const args = parseArgumentsList()
-
-    const closeToken = expect(TOKEN_TYPES.CloseParen, "')'")
     return [openToken, args, closeToken]
   }
   function parseArgumentsList(): Statement[] {
