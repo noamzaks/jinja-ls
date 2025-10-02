@@ -6,7 +6,7 @@ export class Node {
   constructor(
     public parent: Node | undefined = undefined,
     public children: Node[] = [],
-    public definesScope = false
+    public definesScope = false,
   ) {}
 
   addChildren(...children: (Node | undefined | null)[]) {
@@ -93,7 +93,7 @@ export class Statement extends Node {
     public closerOpenToken: TokenNode | undefined = undefined,
     public closerCloseToken: TokenNode | undefined = undefined,
     public closerIdentifier: TokenNode | undefined = undefined,
-    public identifierName: string | undefined = undefined
+    public identifierName: string | undefined = undefined,
   ) {
     super()
     this.addChildren(
@@ -102,7 +102,7 @@ export class Statement extends Node {
       closeToken,
       closerOpenToken,
       closerIdentifier,
-      closerCloseToken
+      closerCloseToken,
     )
   }
 }
@@ -114,7 +114,10 @@ export class ErrorNode extends Statement {
 export class MissingNode extends ErrorNode {
   override type = "MissingNode"
 
-  constructor(public missingType: string, public before: Token) {
+  constructor(
+    public missingType: string,
+    public before: Token,
+  ) {
     super()
   }
 }
@@ -122,7 +125,10 @@ export class MissingNode extends ErrorNode {
 export class UnexpectedToken extends ErrorNode {
   override type = "UnexpectedToken"
 
-  constructor(public message: string, public token: Token) {
+  constructor(
+    public message: string,
+    public token: Token,
+  ) {
     super()
   }
 }
@@ -150,7 +156,7 @@ export class If extends Statement {
     public alternate: Statement[],
     public elseOpenToken: TokenNode | undefined = undefined,
     public elseIdentifier: TokenNode | undefined = undefined,
-    public elseCloseToken: TokenNode | undefined = undefined
+    public elseCloseToken: TokenNode | undefined = undefined,
   ) {
     super()
     this.addChildren(
@@ -159,7 +165,7 @@ export class If extends Statement {
       elseOpenToken,
       elseIdentifier,
       elseCloseToken,
-      ...alternate
+      ...alternate,
     )
   }
 }
@@ -180,7 +186,7 @@ export class For extends Statement {
     public inToken: TokenNode | undefined = undefined,
     public elseOpenToken: TokenNode | undefined = undefined,
     public elseIdentifier: TokenNode | undefined = undefined,
-    public elseCloseToken: TokenNode | undefined = undefined
+    public elseCloseToken: TokenNode | undefined = undefined,
   ) {
     super()
     this.addChildren(
@@ -191,7 +197,7 @@ export class For extends Statement {
       elseOpenToken,
       elseIdentifier,
       elseCloseToken,
-      ...defaultBlock
+      ...defaultBlock,
     )
   }
 }
@@ -204,7 +210,7 @@ export class SetStatement extends Statement {
     public assignee: Expression,
     public value: Expression | null,
     public body: Statement[],
-    public equalsToken: TokenNode | undefined = undefined
+    public equalsToken: TokenNode | undefined = undefined,
   ) {
     super()
     this.addChildren(assignee, equalsToken, value, ...body)
@@ -228,7 +234,7 @@ export class Block extends Statement {
     public name: Identifier,
     public body: Statement[],
     public required: TokenNode | undefined,
-    public scoped: TokenNode | undefined
+    public scoped: TokenNode | undefined,
   ) {
     super()
     this.addChildren(name, required, scoped, ...body)
@@ -241,7 +247,7 @@ export class Include extends Statement {
   constructor(
     public source: Expression,
     public ignoreMissing: Identifier | undefined,
-    public context: Identifier | undefined
+    public context: Identifier | undefined,
   ) {
     super()
   }
@@ -254,7 +260,7 @@ export class Import extends Statement {
     public source: Expression,
     public asToken: TokenNode,
     public name: Identifier,
-    public context: Identifier | undefined
+    public context: Identifier | undefined,
   ) {
     super()
   }
@@ -271,7 +277,7 @@ export class FromImport extends Statement {
       asToken: TokenNode | undefined
       name: Identifier | undefined
     }[],
-    public context: Identifier | undefined
+    public context: Identifier | undefined,
   ) {
     super()
   }
@@ -294,7 +300,7 @@ export class Macro extends Statement {
     public args: Expression[],
     public body: Statement[],
     public openParenToken: TokenNode | undefined = undefined,
-    public closeParenToken: TokenNode | undefined = undefined
+    public closeParenToken: TokenNode | undefined = undefined,
   ) {
     super()
     this.addChildren(name, openParenToken, ...args, closeParenToken, ...body)
@@ -304,7 +310,10 @@ export class Macro extends Statement {
 export class Comment extends Statement {
   override type = "Comment"
 
-  constructor(public token: Token, public value: string) {
+  constructor(
+    public token: Token,
+    public value: string,
+  ) {
     super()
   }
 }
@@ -324,7 +333,7 @@ export class MemberExpression extends Expression {
     public property: Expression,
     public computed: boolean,
     public openToken: TokenNode, // '[' or '.'
-    public closeBracketToken: TokenNode | undefined
+    public closeBracketToken: TokenNode | undefined,
   ) {
     super()
     this.addChildren(object, property, openToken, closeBracketToken)
@@ -338,7 +347,7 @@ export class CallExpression extends Expression {
     public callee: Expression,
     public args: Expression[],
     public openParenToken: TokenNode | undefined = undefined,
-    public closeParenToken: TokenNode | undefined = undefined
+    public closeParenToken: TokenNode | undefined = undefined,
   ) {
     super()
     if (this.callee.type === "Identifier") {
@@ -364,7 +373,10 @@ export class Identifier extends Expression {
   /**
    * @param {string} value The name of the identifier
    */
-  constructor(public value: string, public token: TokenNode) {
+  constructor(
+    public value: string,
+    public token: TokenNode,
+  ) {
     super()
     this.identifierName = value
     this.addChildren(token)
@@ -386,7 +398,10 @@ abstract class Literal<T> extends Expression {
 export class IntegerLiteral extends Literal<number> {
   override type = "IntegerLiteral"
 
-  constructor(public value: number, public token: TokenNode) {
+  constructor(
+    public value: number,
+    public token: TokenNode,
+  ) {
     super(value)
     this.addChildren(token)
   }
@@ -395,7 +410,10 @@ export class IntegerLiteral extends Literal<number> {
 export class FloatLiteral extends Literal<number> {
   override type = "FloatLiteral"
 
-  constructor(public value: number, public token: TokenNode) {
+  constructor(
+    public value: number,
+    public token: TokenNode,
+  ) {
     super(value)
     this.addChildren(token)
   }
@@ -407,7 +425,10 @@ export class FloatLiteral extends Literal<number> {
 export class StringLiteral extends Literal<string> {
   override type = "StringLiteral"
 
-  constructor(public value: string, public tokens: TokenNode[]) {
+  constructor(
+    public value: string,
+    public tokens: TokenNode[],
+  ) {
     super(value)
     this.addChildren(...tokens)
   }
@@ -422,7 +443,7 @@ export class ArrayLiteral extends Literal<Expression[]> {
   constructor(
     public value: Expression[],
     public openBracketToken: TokenNode,
-    public closeBracketToken: TokenNode
+    public closeBracketToken: TokenNode,
   ) {
     super(value)
     this.addChildren(openBracketToken, ...value, closeBracketToken)
@@ -445,13 +466,13 @@ export class ObjectLiteral extends Literal<Map<Expression, Expression>> {
   constructor(
     public value: Map<Expression, Expression>,
     public openBracketToken: TokenNode,
-    public closeBracketToken: TokenNode
+    public closeBracketToken: TokenNode,
   ) {
     super(value)
     this.addChildren(
       openBracketToken,
       ...Array.from(value.entries()).flat(),
-      closeBracketToken
+      closeBracketToken,
     )
   }
 }
@@ -467,7 +488,7 @@ export class BinaryExpression extends Expression {
   constructor(
     public operator: TokenNode,
     public left: Expression,
-    public right: Expression
+    public right: Expression,
   ) {
     super()
     this.addChildren(left, operator, right)
@@ -484,7 +505,7 @@ export class FilterExpression extends Expression {
   constructor(
     public operand: Expression,
     public filter: Identifier | CallExpression,
-    public pipeToken: TokenNode
+    public pipeToken: TokenNode,
   ) {
     super()
     this.addChildren(operand, pipeToken, filter)
@@ -497,7 +518,7 @@ export class FilterStatement extends Statement {
 
   constructor(
     public filter: Identifier | CallExpression,
-    public body: Statement[]
+    public body: Statement[],
   ) {
     super()
     this.addChildren(filter, ...body)
@@ -516,7 +537,7 @@ export class SelectExpression extends Expression {
   constructor(
     public lhs: Expression,
     public test: Expression,
-    public ifToken: TokenNode | undefined = undefined
+    public ifToken: TokenNode | undefined = undefined,
   ) {
     super()
     this.addChildren(lhs, ifToken, test)
@@ -534,7 +555,7 @@ export class TestExpression extends Expression {
     public negate: boolean,
     public test: Identifier, // TODO: Add support for non-identifier tests
     public isToken: TokenNode,
-    public notToken: TokenNode | undefined = undefined
+    public notToken: TokenNode | undefined = undefined,
   ) {
     super()
     this.addChildren(operand, isToken, notToken, test)
@@ -547,7 +568,10 @@ export class TestExpression extends Expression {
 export class UnaryExpression extends Expression {
   override type = "UnaryExpression"
 
-  constructor(public operator: TokenNode, public argument: Expression) {
+  constructor(
+    public operator: TokenNode,
+    public argument: Expression,
+  ) {
     super()
     this.addChildren(operator, argument)
   }
@@ -559,7 +583,7 @@ export class SliceExpression extends Expression {
   constructor(
     public start: Expression | undefined = undefined,
     public stop: Expression | undefined = undefined,
-    public step: Expression | undefined = undefined
+    public step: Expression | undefined = undefined,
   ) {
     super()
     this.addChildren(start, stop, step)
@@ -572,7 +596,7 @@ export class KeywordArgumentExpression extends Expression {
   constructor(
     public key: Identifier,
     public value: Expression,
-    public equalsToken: TokenNode
+    public equalsToken: TokenNode,
   ) {
     super()
     this.identifierName = key.value
@@ -583,7 +607,10 @@ export class KeywordArgumentExpression extends Expression {
 export class SpreadExpression extends Expression {
   override type = "SpreadExpression"
 
-  constructor(public argument: Expression, public operatorToken: TokenNode) {
+  constructor(
+    public argument: Expression,
+    public operatorToken: TokenNode,
+  ) {
     super()
     this.addChildren(operatorToken, argument)
   }
@@ -598,7 +625,7 @@ export class CallStatement extends Statement {
     public callerArgs: Expression[] | null,
     public body: Statement[],
     public openParenToken: TokenNode | undefined = undefined,
-    public closeParenToken: TokenNode | undefined = undefined
+    public closeParenToken: TokenNode | undefined = undefined,
   ) {
     super()
     this.addChildren(
@@ -606,7 +633,7 @@ export class CallStatement extends Statement {
       openParenToken,
       ...(callerArgs ?? []),
       closeParenToken,
-      ...body
+      ...body,
     )
   }
 }
@@ -618,7 +645,7 @@ export class Ternary extends Expression {
     public trueExpr: Expression,
     public falseExpr: Expression,
     public ifToken: TokenNode,
-    public elseToken: TokenNode
+    public elseToken: TokenNode,
   ) {
     super()
     this.addChildren(trueExpr, ifToken, condition, elseToken, falseExpr)

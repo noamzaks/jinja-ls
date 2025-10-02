@@ -97,8 +97,8 @@ const analyzeDocument = (document: TextDocument) => {
                   importedUri,
                   document.languageId,
                   document.version,
-                  contents
-                )
+                  contents,
+                ),
               )
             }
           })
@@ -143,7 +143,7 @@ connection.languages.diagnostics.on(async (params) => {
           message: unexpectedToken.message,
           range: lsp.Range.create(
             document.positionAt(unexpectedToken.token.start),
-            document.positionAt(unexpectedToken.token.end)
+            document.positionAt(unexpectedToken.token.end),
           ),
           severity: lsp.DiagnosticSeverity.Error,
         })
@@ -155,7 +155,7 @@ connection.languages.diagnostics.on(async (params) => {
         message: e.message,
         range: lsp.Range.create(
           document.positionAt(e.start),
-          document.positionAt(e.end)
+          document.positionAt(e.end),
         ),
         severity: lsp.DiagnosticSeverity.Error,
       })
@@ -182,7 +182,7 @@ connection.languages.semanticTokens.on(async (params) => {
         position.character,
         item.end - item.start,
         item.tokenType,
-        item.tokenModifiers
+        item.tokenModifiers,
       )
     }
   }
@@ -266,8 +266,8 @@ connection.onHover(async (params) => {
           documents,
           documentASTs,
           documentSymbols,
-          documentImports
-        )
+          documentImports,
+        ),
       )
       if (resolvedType?.signature !== undefined) {
         const contents: lsp.MarkedString[] = [
@@ -293,7 +293,7 @@ connection.onHover(async (params) => {
         documents,
         documentASTs,
         documentSymbols,
-        documentImports
+        documentImports,
       )
       if (
         symbol !== undefined &&
@@ -308,8 +308,8 @@ connection.onHover(async (params) => {
               value: symbolDocument.getText(
                 lsp.Range.create(
                   symbolDocument.positionAt(symbol.node.openToken.start),
-                  symbolDocument.positionAt(symbol.node.closeToken.end)
-                )
+                  symbolDocument.positionAt(symbol.node.closeToken.end),
+                ),
               ),
             },
           ],
@@ -333,7 +333,7 @@ connection.onHover(async (params) => {
         documentASTs,
         documentSymbols,
         documentImports,
-        { checkCurrent: false, importTypes: ["Extends"] }
+        { checkCurrent: false, importTypes: ["Extends"] },
       )
       const sourceBlock = blockSymbol?.node as ast.Block | undefined
       if (
@@ -345,8 +345,8 @@ connection.onHover(async (params) => {
         const sourceText = blockDocument.getText(
           lsp.Range.create(
             blockDocument.positionAt(sourceBlock.openToken.start),
-            blockDocument.positionAt(sourceBlock.closeToken.end)
-          )
+            blockDocument.positionAt(sourceBlock.closeToken.end),
+          ),
         )
 
         return {
@@ -373,7 +373,7 @@ connection.onHover(async (params) => {
         documents,
         documentASTs,
         documentSymbols,
-        documentImports
+        documentImports,
       )
       const resolvedType = resolveType(nodeType)
 
@@ -428,7 +428,7 @@ connection.onDefinition(async (params) => {
         documents,
         documentASTs,
         documentSymbols,
-        documentImports
+        documentImports,
       )
 
       if (symbol !== undefined && symbolDocument !== undefined) {
@@ -436,8 +436,8 @@ connection.onDefinition(async (params) => {
           symbolDocument.uri,
           lsp.Range.create(
             symbolDocument.positionAt(symbol.node.name.token.start),
-            symbolDocument.positionAt(symbol.node.name.token.end)
-          )
+            symbolDocument.positionAt(symbol.node.name.token.end),
+          ),
         )
       }
     }
@@ -457,7 +457,7 @@ connection.onDefinition(async (params) => {
       const uri = Utils.joinPath(
         URI.parse(document.uri),
         "..",
-        importedFilename
+        importedFilename,
       ).toString()
 
       const sourceLiteral = includeExpression.source as ast.StringLiteral
@@ -466,18 +466,18 @@ connection.onDefinition(async (params) => {
           uri,
           lsp.Range.create(
             lsp.Position.create(0, 0),
-            lsp.Position.create(0, 0)
+            lsp.Position.create(0, 0),
           ),
           lsp.Range.create(
             lsp.Position.create(0, 0),
-            lsp.Position.create(0, 0)
+            lsp.Position.create(0, 0),
           ),
           lsp.Range.create(
             document.positionAt(sourceLiteral.tokens[0].start),
             document.positionAt(
-              sourceLiteral.tokens[sourceLiteral.tokens.length - 1].end
-            )
-          )
+              sourceLiteral.tokens[sourceLiteral.tokens.length - 1].end,
+            ),
+          ),
         ),
       ]
     }
@@ -498,7 +498,7 @@ connection.onDefinition(async (params) => {
         documentASTs,
         documentSymbols,
         documentImports,
-        { checkCurrent: false, importTypes: ["Extends"] }
+        { checkCurrent: false, importTypes: ["Extends"] },
       )
 
       if (sourceBlock !== undefined && sourceBlockDocument !== undefined) {
@@ -507,8 +507,8 @@ connection.onDefinition(async (params) => {
             sourceBlockDocument.uri,
             lsp.Range.create(
               sourceBlockDocument.positionAt(sourceBlock.node.name.token.start),
-              sourceBlockDocument.positionAt(sourceBlock.node.name.token.end)
-            )
+              sourceBlockDocument.positionAt(sourceBlock.node.name.token.end),
+            ),
           ),
         ]
       }
@@ -524,7 +524,7 @@ connection.onDefinition(async (params) => {
         documents,
         documentASTs,
         documentSymbols,
-        documentImports
+        documentImports,
       )
 
       if (
@@ -537,8 +537,8 @@ connection.onDefinition(async (params) => {
             symbolDocument.uri,
             lsp.Range.create(
               symbolDocument.positionAt(symbol.identifierNode.token.start),
-              symbolDocument.positionAt(symbol.identifierNode.token.end)
-            )
+              symbolDocument.positionAt(symbol.identifierNode.token.end),
+            ),
           ),
         ]
       }
@@ -573,7 +573,7 @@ connection.onSignatureHelp(async (params) => {
           documents,
           documentASTs,
           documentSymbols,
-          documentImports
+          documentImports,
         )
         const resolvedType = resolveType(symbolType)
         const calleeEnd = callee.getEnd()
@@ -586,26 +586,26 @@ connection.onSignatureHelp(async (params) => {
           const parameters =
             resolvedType.signature.arguments?.map(
               (argument) =>
-                ({ label: argument.name } satisfies lsp.ParameterInformation)
+                ({ label: argument.name }) satisfies lsp.ParameterInformation,
             ) ?? []
 
           const currentCallText = document
             .getText(
               lsp.Range.create(
                 document.positionAt(calleeEnd + 1),
-                document.positionAt(callExpression.closeParenToken.start)
-              )
+                document.positionAt(callExpression.closeParenToken.start),
+              ),
             )
             .trimEnd()
           let activeParameter = 0
           const lastPeriod = currentCallText.lastIndexOf(
             ",",
-            document.offsetAt(params.position) - calleeEnd - 2
+            document.offsetAt(params.position) - calleeEnd - 2,
           )
           const nextPeriod = currentCallText.indexOf(",", lastPeriod + 1)
           const currentParameter = currentCallText.slice(
             lastPeriod + 1,
-            nextPeriod === -1 ? undefined : nextPeriod
+            nextPeriod === -1 ? undefined : nextPeriod,
           )
           const previousParameters = currentCallText.slice(0, lastPeriod + 1)
           // TODO: this could also appear inside a string
@@ -613,12 +613,13 @@ connection.onSignatureHelp(async (params) => {
           if (equalIndex !== -1) {
             activeParameter = parameters.findIndex(
               (parameter) =>
-                parameter.label === currentParameter.slice(0, equalIndex).trim()
+                parameter.label ===
+                currentParameter.slice(0, equalIndex).trim(),
             )
           } else if (!previousParameters.includes("=")) {
             for (const c of currentCallText.slice(
               0,
-              nextPeriod === -1 ? undefined : nextPeriod
+              nextPeriod === -1 ? undefined : nextPeriod,
             )) {
               if (c === ",") {
                 activeParameter++
@@ -633,7 +634,7 @@ connection.onSignatureHelp(async (params) => {
               lsp.SignatureInformation.create(
                 stringifySignatureInfo(resolvedType.signature),
                 undefined,
-                ...parameters
+                ...parameters,
               ),
             ],
             activeSignature: 0,
@@ -649,15 +650,15 @@ connection.onSignatureHelp(async (params) => {
           documents,
           documentASTs,
           documentSymbols,
-          documentImports
-        )
+          documentImports,
+        ),
       )
       if (symbolType?.signature !== undefined) {
         return {
           signatures: [
             lsp.SignatureInformation.create(
               stringifySignatureInfo(symbolType.signature),
-              symbolType.signature.documentation
+              symbolType.signature.documentation,
               // TODO
               // ...parameters
             ),
@@ -692,7 +693,7 @@ connection.onCompletion(async (params) => {
             label: testName,
             kind: lsp.CompletionItemKind.Function,
             documentation: test.brief,
-          } satisfies lsp.CompletionItem)
+          }) satisfies lsp.CompletionItem,
       )
     }
 
@@ -708,7 +709,7 @@ connection.onCompletion(async (params) => {
             label: filterName,
             kind: lsp.CompletionItemKind.Function,
             documentation: filter.brief,
-          } satisfies lsp.CompletionItem)
+          }) satisfies lsp.CompletionItem,
       )
     }
 
@@ -720,14 +721,14 @@ connection.onCompletion(async (params) => {
         documents,
         documentASTs,
         documentSymbols,
-        documentImports
+        documentImports,
       )
       const resolvedType = resolveType(symbolType)
 
       if (resolvedType !== undefined) {
         const completions: lsp.CompletionItem[] = []
         for (const [key, value] of Object.entries(
-          resolvedType.properties ?? {}
+          resolvedType.properties ?? {},
         )) {
           // Don't show array indexing as properties
           if (!isNaN(parseInt(key, 10))) {
@@ -766,7 +767,7 @@ connection.onCompletion(async (params) => {
         documents,
         documentASTs,
         documentSymbols,
-        documentImports
+        documentImports,
       )
       const completions: lsp.CompletionItem[] = []
       for (const [symbolName, [symbol, document]] of symbols.entries()) {
@@ -775,7 +776,7 @@ connection.onCompletion(async (params) => {
           documents,
           documentASTs,
           documentSymbols,
-          documentImports
+          documentImports,
         )
         const resolvedType = resolveType(type)
         let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Variable

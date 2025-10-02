@@ -131,7 +131,7 @@ export class StringValue extends RuntimeValue<string> {
       "capitalize",
       new FunctionValue(() => {
         return new StringValue(
-          this.value.charAt(0).toUpperCase() + this.value.slice(1)
+          this.value.charAt(0).toUpperCase() + this.value.slice(1),
         )
       }),
     ],
@@ -169,7 +169,7 @@ export class StringValue extends RuntimeValue<string> {
           return new BooleanValue(false)
         }
         throw new Error(
-          "startswith() argument must be a string or tuple of strings"
+          "startswith() argument must be a string or tuple of strings",
         )
       }),
     ],
@@ -194,7 +194,7 @@ export class StringValue extends RuntimeValue<string> {
           return new BooleanValue(false)
         }
         throw new Error(
-          "endswith() argument must be a string or tuple of strings"
+          "endswith() argument must be a string or tuple of strings",
         )
       }),
     ],
@@ -274,7 +274,7 @@ export class StringValue extends RuntimeValue<string> {
           throw new Error("replace() count argument must be a number or null")
         }
         return new StringValue(
-          replace(this.value, oldValue.value, newValue.value, count.value)
+          replace(this.value, oldValue.value, newValue.value, count.value),
         )
       }),
     ],
@@ -327,13 +327,13 @@ export class ObjectValue extends RuntimeValue<Map<string, AnyRuntimeValue>> {
   items(): ArrayValue {
     return new ArrayValue(
       Array.from(this.value.entries()).map(
-        ([key, value]) => new ArrayValue([new StringValue(key), value])
-      )
+        ([key, value]) => new ArrayValue([new StringValue(key), value]),
+      ),
     )
   }
   keys(): ArrayValue {
     return new ArrayValue(
-      Array.from(this.value.keys()).map((key) => new StringValue(key))
+      Array.from(this.value.keys()).map((key) => new StringValue(key)),
     )
   }
   values(): ArrayValue {
@@ -417,7 +417,7 @@ export class Environment {
         }
         if (args.length !== 1 || !(args[0] instanceof ObjectValue)) {
           throw new Error(
-            "`namespace` expects either zero arguments or a single object argument"
+            "`namespace` expects either zero arguments or a single object argument",
           )
         }
         return args[0]
@@ -505,7 +505,7 @@ export class Environment {
 
   private declareVariable(
     name: string,
-    value: AnyRuntimeValue
+    value: AnyRuntimeValue,
   ): AnyRuntimeValue {
     if (this.variables.has(name)) {
       throw new SyntaxError(`Variable already declared: ${name}`)
@@ -595,7 +595,7 @@ export class Interpreter {
    */
   private evaluateBinaryExpression(
     node: BinaryExpression,
-    environment: Environment
+    environment: Environment,
   ): AnyRuntimeValue {
     const left = this.evaluate(node.left, environment)
 
@@ -630,7 +630,7 @@ export class Interpreter {
         return new BooleanValue(node.operator.value === "not in")
       }
       throw new Error(
-        `Cannot perform operation ${node.operator.value} on undefined values`
+        `Cannot perform operation ${node.operator.value} on undefined values`,
       )
     } else if (left instanceof NullValue || right instanceof NullValue) {
       throw new Error("Cannot perform operation on null values")
@@ -653,8 +653,8 @@ export class Interpreter {
             node.operator.value === "+"
               ? a + b
               : node.operator.value === "-"
-              ? a - b
-              : a * b
+                ? a - b
+                : a * b
           const isFloat =
             left instanceof FloatValue || right instanceof FloatValue
           return isFloat ? new FloatValue(res) : new IntegerValue(res)
@@ -721,13 +721,13 @@ export class Interpreter {
     }
 
     throw new SyntaxError(
-      `Unknown operator "${node.operator.value}" between ${left.type} and ${right.type}`
+      `Unknown operator "${node.operator.value}" between ${left.type} and ${right.type}`,
     )
   }
 
   private evaluateArguments(
     args: Expression[],
-    environment: Environment
+    environment: Environment,
   ): [AnyRuntimeValue[], Map<string, AnyRuntimeValue>] {
     // Accumulate args and kwargs
     const positionalArguments: AnyRuntimeValue[] = []
@@ -748,12 +748,12 @@ export class Interpreter {
         const kwarg = argument as KeywordArgumentExpression
         keywordArguments.set(
           kwarg.key.value,
-          this.evaluate(kwarg.value, environment)
+          this.evaluate(kwarg.value, environment),
         )
       } else {
         if (keywordArguments.size > 0) {
           throw new Error(
-            "Positional arguments must come before keyword arguments"
+            "Positional arguments must come before keyword arguments",
           )
         }
         positionalArguments.push(this.evaluate(argument, environment))
@@ -765,7 +765,7 @@ export class Interpreter {
   private applyFilter(
     operand: AnyRuntimeValue,
     filterNode: Identifier | CallExpression,
-    environment: Environment
+    environment: Environment,
   ) {
     // For now, we only support the built-in filters
     // TODO: Add support for non-identifier filters
@@ -803,7 +803,7 @@ export class Interpreter {
               operand.value.sort((a, b) => {
                 if (a.type !== b.type) {
                   throw new Error(
-                    `Cannot compare different types: ${a.type} and ${b.type}`
+                    `Cannot compare different types: ${a.type} and ${b.type}`,
                   )
                 }
                 switch (a.type) {
@@ -815,12 +815,12 @@ export class Interpreter {
                     )
                   case "StringValue":
                     return (a as StringValue).value.localeCompare(
-                      (b as StringValue).value
+                      (b as StringValue).value,
                     )
                   default:
                     throw new Error(`Cannot compare type: ${a.type}`)
                 }
-              })
+              }),
             )
           case "join":
             return new StringValue(operand.value.map((x) => x.value).join(""))
@@ -865,9 +865,9 @@ export class Interpreter {
                 .split("\n")
                 .map((x, i) =>
                   // By default, don't indent the first line or empty lines
-                  i === 0 || x.length === 0 ? x : "    " + x
+                  i === 0 || x.length === 0 ? x : "    " + x,
                 )
-                .join("\n")
+                .join("\n"),
             )
           case "join":
           case "string":
@@ -904,8 +904,8 @@ export class Interpreter {
           case "items":
             return new ArrayValue(
               Array.from(operand.value.entries()).map(
-                ([key, value]) => new ArrayValue([new StringValue(key), value])
-              )
+                ([key, value]) => new ArrayValue([new StringValue(key), value]),
+              ),
             )
           case "length":
             return new IntegerValue(operand.value.size)
@@ -927,7 +927,7 @@ export class Interpreter {
         }
       }
       throw new Error(
-        `Cannot apply filter "${filter.value}" to type: ${operand.type}`
+        `Cannot apply filter "${filter.value}" to type: ${operand.type}`,
       )
     } else if (filterNode.type === "CallExpression") {
       const filter = filterNode as CallExpression
@@ -953,7 +953,7 @@ export class Interpreter {
           value = operand.value.map((x) => x.value)
         } else {
           throw new Error(
-            `Cannot apply filter "${filterName}" to type: ${operand.type}`
+            `Cannot apply filter "${filterName}" to type: ${operand.type}`,
           )
         }
         const [args, kwargs] = this.evaluateArguments(filter.args, environment)
@@ -980,8 +980,8 @@ export class Interpreter {
           return isNaN(val)
             ? defaultValue
             : filterName === "int"
-            ? new IntegerValue(val)
-            : new FloatValue(val)
+              ? new IntegerValue(val)
+              : new FloatValue(val)
         } else if (
           operand instanceof IntegerValue ||
           operand instanceof FloatValue
@@ -993,7 +993,7 @@ export class Interpreter {
             : new FloatValue(operand.value ? 1.0 : 0.0)
         } else {
           throw new Error(
-            `Cannot apply filter "${filterName}" to type: ${operand.type}`
+            `Cannot apply filter "${filterName}" to type: ${operand.type}`,
           )
         }
       } else if (filterName === "default") {
@@ -1021,7 +1021,7 @@ export class Interpreter {
 
             if (operand.value.some((x) => !(x instanceof ObjectValue))) {
               throw new Error(
-                `\`${filterName}\` can only be applied to array of objects`
+                `\`${filterName}\` can only be applied to array of objects`,
               )
             }
             if (filter.args.some((x) => x.type !== "StringLiteral")) {
@@ -1029,7 +1029,7 @@ export class Interpreter {
             }
 
             const [attr, testName, value] = filter.args.map((x) =>
-              this.evaluate(x, environment)
+              this.evaluate(x, environment),
             ) as StringValue[]
 
             let testFunction: (...x: AnyRuntimeValue[]) => boolean
@@ -1078,7 +1078,7 @@ export class Interpreter {
               return new ArrayValue(mapped)
             } else {
               throw new Error(
-                "`map` expressions without `attribute` set are not currently supported."
+                "`map` expressions without `attribute` set are not currently supported.",
               )
             }
           }
@@ -1096,7 +1096,7 @@ export class Interpreter {
 
             const [args, kwargs] = this.evaluateArguments(
               filter.args,
-              environment
+              environment,
             )
 
             const width =
@@ -1114,7 +1114,7 @@ export class Interpreter {
             const indented = lines.map((x, i) =>
               (!first.value && i === 0) || (!blank.value && x.length === 0)
                 ? x
-                : indent + x
+                : indent + x,
             )
             return new StringValue(indented.join("\n"))
           }
@@ -1125,18 +1125,18 @@ export class Interpreter {
             }
             const [args, kwargs] = this.evaluateArguments(
               filter.args,
-              environment
+              environment,
             )
             return replaceFn.value(
               [...args, new KeywordArgumentsValue(kwargs)],
-              environment
+              environment,
             )
           }
         }
         throw new Error(`Unknown StringValue filter: ${filterName}`)
       } else {
         throw new Error(
-          `Cannot apply filter "${filterName}" to type: ${operand.type}`
+          `Cannot apply filter "${filterName}" to type: ${operand.type}`,
         )
       }
     }
@@ -1148,7 +1148,7 @@ export class Interpreter {
    */
   private evaluateFilterExpression(
     node: FilterExpression,
-    environment: Environment
+    environment: Environment,
   ): AnyRuntimeValue {
     const operand = this.evaluate(node.operand, environment)
     return this.applyFilter(operand, node.filter, environment)
@@ -1159,7 +1159,7 @@ export class Interpreter {
    */
   private evaluateTestExpression(
     node: TestExpression,
-    environment: Environment
+    environment: Environment,
   ): BooleanValue {
     // For now, we only support the built-in tests
     // https://jinja.palletsprojects.com/en/3.0.x/templates/#list-of-builtin-tests
@@ -1180,7 +1180,7 @@ export class Interpreter {
    */
   private evaluateSelectExpression(
     node: SelectExpression,
-    environment: Environment
+    environment: Environment,
   ): AnyRuntimeValue {
     const predicate = this.evaluate(node.test, environment)
     if (!predicate.__bool__().value) {
@@ -1194,7 +1194,7 @@ export class Interpreter {
    */
   private evaluateUnaryExpression(
     node: UnaryExpression,
-    environment: Environment
+    environment: Environment,
   ): AnyRuntimeValue {
     const argument = this.evaluate(node.argument, environment)
 
@@ -1208,7 +1208,7 @@ export class Interpreter {
 
   private evaluateTernaryExpression(
     node: Ternary,
-    environment: Environment
+    environment: Environment,
   ): AnyRuntimeValue {
     const cond = this.evaluate(node.condition, environment)
     return cond.__bool__().value
@@ -1222,7 +1222,7 @@ export class Interpreter {
 
   private evaluateBlock(
     statements: Statement[],
-    environment: Environment
+    environment: Environment,
   ): StringValue {
     // Jinja templates always evaluate to a String,
     // so we accumulate the result of each statement into a final string
@@ -1231,7 +1231,7 @@ export class Interpreter {
     for (const statement of statements) {
       const lastEvaluated: AnyRuntimeValue = this.evaluate(
         statement,
-        environment
+        environment,
       )
 
       if (
@@ -1247,14 +1247,14 @@ export class Interpreter {
 
   private evaluateIdentifier(
     node: Identifier,
-    environment: Environment
+    environment: Environment,
   ): AnyRuntimeValue {
     return environment.lookupVariable(node.value)
   }
 
   private evaluateCallExpression(
     expr: CallExpression,
-    environment: Environment
+    environment: Environment,
   ): AnyRuntimeValue {
     // Accumulate all keyword arguments into a single object, which will be
     // used as the final argument in the call function.
@@ -1267,7 +1267,7 @@ export class Interpreter {
     const fn = this.evaluate(expr.callee, environment)
     if (fn.type !== "FunctionValue") {
       throw new Error(
-        `Cannot call something that is not a function: got ${fn.type}`
+        `Cannot call something that is not a function: got ${fn.type}`,
       )
     }
     return (fn as FunctionValue).value(args, environment)
@@ -1276,7 +1276,7 @@ export class Interpreter {
   private evaluateSliceExpression(
     object: AnyRuntimeValue,
     expr: SliceExpression,
-    environment: Environment
+    environment: Environment,
   ): ArrayValue | StringValue {
     if (!(object instanceof ArrayValue || object instanceof StringValue)) {
       throw new Error("Slice object must be an array or string")
@@ -1299,7 +1299,7 @@ export class Interpreter {
 
     if (object instanceof ArrayValue) {
       return new ArrayValue(
-        slice(object.value, start.value, stop.value, step.value)
+        slice(object.value, start.value, stop.value, step.value),
       )
     } else {
       return new StringValue(
@@ -1307,15 +1307,15 @@ export class Interpreter {
           Array.from(object.value),
           start.value,
           stop.value,
-          step.value
-        ).join("")
+          step.value,
+        ).join(""),
       )
     }
   }
 
   private evaluateMemberExpression(
     expr: MemberExpression,
-    environment: Environment
+    environment: Environment,
   ): AnyRuntimeValue {
     const object = this.evaluate(expr.object, environment)
 
@@ -1325,7 +1325,7 @@ export class Interpreter {
         return this.evaluateSliceExpression(
           object,
           expr.property as SliceExpression,
-          environment
+          environment,
         )
       } else {
         property = this.evaluate(expr.property, environment)
@@ -1338,7 +1338,7 @@ export class Interpreter {
     if (object instanceof ObjectValue) {
       if (!(property instanceof StringValue)) {
         throw new Error(
-          `Cannot access property with non-string: got ${property.type}`
+          `Cannot access property with non-string: got ${property.type}`,
         )
       }
       value =
@@ -1353,13 +1353,13 @@ export class Interpreter {
         value = object.builtins.get(property.value)
       } else {
         throw new Error(
-          `Cannot access property with non-string/non-number: got ${property.type}`
+          `Cannot access property with non-string/non-number: got ${property.type}`,
         )
       }
     } else {
       if (!(property instanceof StringValue)) {
         throw new Error(
-          `Cannot access property with non-string: got ${property.type}`
+          `Cannot access property with non-string: got ${property.type}`,
         )
       }
       value = object.builtins.get(property.value)
@@ -1385,14 +1385,14 @@ export class Interpreter {
         throw new Error(
           `Too ${
             tuple.value.length > arr.length ? "few" : "many"
-          } items to unpack in set`
+          } items to unpack in set`,
         )
       }
       for (let i = 0; i < tuple.value.length; ++i) {
         const elem = tuple.value[i]
         if (elem.type !== "Identifier") {
           throw new Error(
-            `Cannot unpack to non-identifier in set: ${elem.type}`
+            `Cannot unpack to non-identifier in set: ${elem.type}`,
           )
         }
         environment.setVariable((elem as Identifier).value, arr[i])
@@ -1411,8 +1411,8 @@ export class Interpreter {
     } else {
       throw new Error(
         `Invalid LHS inside assignment expression: ${JSON.stringify(
-          node.assignee
-        )}`
+          node.assignee,
+        )}`,
       )
     }
 
@@ -1423,7 +1423,7 @@ export class Interpreter {
     const test = this.evaluate(node.test, environment)
     return this.evaluateBlock(
       test.__bool__().value ? node.body : node.alternate,
-      environment
+      environment,
     )
   }
 
@@ -1442,7 +1442,7 @@ export class Interpreter {
 
     if (!(iterable instanceof ArrayValue || iterable instanceof ObjectValue)) {
       throw new Error(
-        `Expected iterable or object type in for loop: got ${iterable.type}`
+        `Expected iterable or object type in for loop: got ${iterable.type}`,
       )
     }
 
@@ -1473,7 +1473,7 @@ export class Interpreter {
           throw new Error(
             `Too ${
               loopvar.value.length > c.value.length ? "few" : "many"
-            } items to unpack`
+            } items to unpack`,
           )
         }
 
@@ -1481,12 +1481,12 @@ export class Interpreter {
           for (let j = 0; j < loopvar.value.length; ++j) {
             if (loopvar.value[j].type !== "Identifier") {
               throw new Error(
-                `Cannot unpack non-identifier type: ${loopvar.value[j].type}`
+                `Cannot unpack non-identifier type: ${loopvar.value[j].type}`,
               )
             }
             scope.setVariable(
               (loopvar.value[j] as Identifier).value,
-              c.value[j]
+              c.value[j],
             )
           }
         }
@@ -1586,7 +1586,7 @@ export class Interpreter {
             const identifier = nodeArg as Identifier
             if (!passedArg) {
               throw new Error(
-                `Missing positional argument: ${identifier.value}`
+                `Missing positional argument: ${identifier.value}`,
               )
             }
             macroScope.setVariable(identifier.value, passedArg)
@@ -1602,7 +1602,7 @@ export class Interpreter {
           }
         }
         return this.evaluateBlock(node.body, macroScope)
-      })
+      }),
     )
 
     // Macros are not evaluated immediately, so we return null
@@ -1611,7 +1611,7 @@ export class Interpreter {
 
   private evaluateCallStatement(
     node: CallStatement,
-    environment: Environment
+    environment: Environment,
   ): AnyRuntimeValue {
     const callerFn = new FunctionValue(
       (callerArgs: AnyRuntimeValue[], callerEnv: Environment) => {
@@ -1621,28 +1621,28 @@ export class Interpreter {
             const param = node.callerArgs[i]
             if (param.type !== "Identifier") {
               throw new Error(
-                `Caller parameter must be an identifier, got ${param.type}`
+                `Caller parameter must be an identifier, got ${param.type}`,
               )
             }
             callBlockEnv.setVariable(
               (param as Identifier).value,
-              callerArgs[i] ?? new UndefinedValue()
+              callerArgs[i] ?? new UndefinedValue(),
             )
           }
         }
         return this.evaluateBlock(node.body, callBlockEnv)
-      }
+      },
     )
 
     const [macroArgs, macroKwargs] = this.evaluateArguments(
       node.call.args,
-      environment
+      environment,
     )
     macroArgs.push(new KeywordArgumentsValue(macroKwargs))
     const fn = this.evaluate(node.call.callee, environment)
     if (fn.type !== "FunctionValue") {
       throw new Error(
-        `Cannot call something that is not a function: got ${fn.type}`
+        `Cannot call something that is not a function: got ${fn.type}`,
       )
     }
     const newEnv = new Environment(environment)
@@ -1652,7 +1652,7 @@ export class Interpreter {
 
   private evaluateFilterStatement(
     node: FilterStatement,
-    environment: Environment
+    environment: Environment,
   ): AnyRuntimeValue {
     const rendered = this.evaluateBlock(node.body, environment)
     return this.applyFilter(rendered, node.filter, environment)
@@ -1660,7 +1660,7 @@ export class Interpreter {
 
   evaluate(
     statement: Statement | undefined,
-    environment: Environment
+    environment: Environment,
   ): AnyRuntimeValue {
     if (!statement) return new UndefinedValue()
 
@@ -1681,7 +1681,7 @@ export class Interpreter {
       case "CallStatement":
         return this.evaluateCallStatement(
           statement as CallStatement,
-          environment
+          environment,
         )
 
       case "Break":
@@ -1699,14 +1699,14 @@ export class Interpreter {
       case "ArrayLiteral":
         return new ArrayValue(
           (statement as ArrayLiteral).value.map((x) =>
-            this.evaluate(x, environment)
-          )
+            this.evaluate(x, environment),
+          ),
         )
       case "TupleLiteral":
         return new TupleValue(
           (statement as TupleLiteral).value.map((x) =>
-            this.evaluate(x, environment)
-          )
+            this.evaluate(x, environment),
+          ),
         )
       case "ObjectLiteral": {
         const mapping = new Map()
@@ -1714,7 +1714,7 @@ export class Interpreter {
           const evaluatedKey = this.evaluate(key, environment)
           if (!(evaluatedKey instanceof StringValue)) {
             throw new Error(
-              `Object keys must be strings: got ${evaluatedKey.type}`
+              `Object keys must be strings: got ${evaluatedKey.type}`,
             )
           }
           mapping.set(evaluatedKey.value, this.evaluate(value, environment))
@@ -1726,43 +1726,43 @@ export class Interpreter {
       case "CallExpression":
         return this.evaluateCallExpression(
           statement as CallExpression,
-          environment
+          environment,
         )
       case "MemberExpression":
         return this.evaluateMemberExpression(
           statement as MemberExpression,
-          environment
+          environment,
         )
 
       case "UnaryExpression":
         return this.evaluateUnaryExpression(
           statement as UnaryExpression,
-          environment
+          environment,
         )
       case "BinaryExpression":
         return this.evaluateBinaryExpression(
           statement as BinaryExpression,
-          environment
+          environment,
         )
       case "FilterExpression":
         return this.evaluateFilterExpression(
           statement as FilterExpression,
-          environment
+          environment,
         )
       case "FilterStatement":
         return this.evaluateFilterStatement(
           statement as FilterStatement,
-          environment
+          environment,
         )
       case "TestExpression":
         return this.evaluateTestExpression(
           statement as TestExpression,
-          environment
+          environment,
         )
       case "SelectExpression":
         return this.evaluateSelectExpression(
           statement as SelectExpression,
-          environment
+          environment,
         )
       case "Ternary":
         return this.evaluateTernaryExpression(statement as Ternary, environment)
@@ -1800,8 +1800,8 @@ function convertToRuntimeValues(input: unknown): AnyRuntimeValue {
             Object.entries(input).map(([key, value]) => [
               key,
               convertToRuntimeValues(value),
-            ])
-          )
+            ]),
+          ),
         )
       }
     case "function":
@@ -1827,7 +1827,7 @@ function convertToRuntimeValues(input: unknown): AnyRuntimeValue {
 function toJSON(
   input: AnyRuntimeValue,
   indent?: number | null,
-  depth?: number
+  depth?: number,
 ): string {
   const currentDepth = depth ?? 0
   switch (input.type) {
@@ -1847,11 +1847,11 @@ function toJSON(
 
       if (input.type === "ArrayValue") {
         const core = (input as ArrayValue).value.map((x) =>
-          toJSON(x, indent, currentDepth + 1)
+          toJSON(x, indent, currentDepth + 1),
         )
         return indent
           ? `[${childrenPadding}${core.join(
-              `,${childrenPadding}`
+              `,${childrenPadding}`,
             )}${basePadding}]`
           : `[${core.join(", ")}]`
       } else {
@@ -1860,7 +1860,7 @@ function toJSON(
           ([key, value]) => {
             const v = `"${key}": ${toJSON(value, indent, currentDepth + 1)}`
             return indent ? `${childrenPadding}${v}` : v
-          }
+          },
         )
         return indent
           ? `{${core.join(",")}${basePadding}}`

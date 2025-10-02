@@ -32,7 +32,7 @@ export type SymbolInfo =
         documentImports: Map<
           string,
           (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
-        >
+        >,
       ) => TypeInfo | TypeReference | undefined
     }
 
@@ -47,7 +47,7 @@ export const argToArgumentInfo = (arg: ast.Expression): ArgumentInfo => {
 export const collectSymbols = (
   statement: ast.Node,
   result: Map<string, SymbolInfo[]>,
-  imports: (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
+  imports: (ast.Include | ast.Import | ast.FromImport | ast.Extends)[],
 ) => {
   const addSymbol = (name: string, value: SymbolInfo) => {
     const values = result.get(name) ?? []
@@ -80,7 +80,7 @@ export const collectSymbols = (
                   type: "str",
                   literalValue: JSON.stringify(arg.identifierName),
                 },
-              ])
+              ]),
             ),
           },
           catch_kwargs: {
@@ -119,7 +119,7 @@ export const collectSymbols = (
           documents,
           documentASTs,
           documentSymbols,
-          documentImports
+          documentImports,
         ) =>
           argument.type === "KeywordArgumentExpression"
             ? getType(
@@ -128,7 +128,7 @@ export const collectSymbols = (
                 documents,
                 documentASTs,
                 documentSymbols,
-                documentImports
+                documentImports,
               )
             : undefined,
       })
@@ -179,7 +179,7 @@ export const collectSymbols = (
           documents,
           documentASTs,
           documentSymbols,
-          documentImports
+          documentImports,
         ) =>
           getType(
             setStatement.value,
@@ -187,7 +187,7 @@ export const collectSymbols = (
             documents,
             documentASTs,
             documentSymbols,
-            documentImports
+            documentImports,
           ),
       })
     }
@@ -219,7 +219,7 @@ export const argToPython = (arg: ast.Statement) => {
 
 export const importToUri = (
   i: ast.Include | ast.Import | ast.FromImport | ast.Extends,
-  uri: string
+  uri: string,
 ) => {
   if (i.source.type !== "StringLiteral") {
     return
@@ -227,7 +227,7 @@ export const importToUri = (
   return Utils.joinPath(
     URI.parse(uri),
     "..",
-    (i.source as ast.StringLiteral).value
+    (i.source as ast.StringLiteral).value,
   ).toString()
 }
 
@@ -250,7 +250,7 @@ export const getScope = (node: ast.Node | undefined, initial = false) => {
 export const isInScope = (
   node: ast.Node,
   inScopeOf: ast.Node | undefined,
-  program: ast.Program | undefined
+  program: ast.Program | undefined,
 ) => {
   const scopeStart = inScopeOf?.getStart?.()
   const nodeStart = node.getStart()
@@ -476,11 +476,11 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
   name: string,
   type: K,
   program: ast.Program | undefined,
-  inScopeOf: ast.Node | undefined = undefined
+  inScopeOf: ast.Node | undefined = undefined,
 ): Extract<SymbolInfo, { type: K }> | undefined => {
   if (type === "Variable") {
     for (const [definerType, specialSymbols] of Object.entries(
-      SPECIAL_SYMBOLS
+      SPECIAL_SYMBOLS,
     )) {
       const parent = parentOfType(inScopeOf, definerType)
       if (specialSymbols[name] !== undefined && parent !== undefined) {
@@ -497,7 +497,7 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
 
   // TODO: remove sorting here
   const symbolOptions = (symbols?.get(name) ?? []).sort(
-    (a, b) => (a.node?.getStart() ?? 0) - (b.node?.getStart() ?? 0)
+    (a, b) => (a.node?.getStart() ?? 0) - (b.node?.getStart() ?? 0),
   )
 
   // Look from the last to the first definition of this symbol to find the last one.
@@ -533,7 +533,7 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
     string,
     (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
   >,
-  importTypes?: string[]
+  importTypes?: string[],
 ) => {
   const imports = documentImports.get(document.uri)
   const program = documentASTs.get(document.uri)?.program
@@ -586,7 +586,7 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
                 importedSymbols,
                 symbolName,
                 "Variable",
-                importedAST
+                importedAST,
               )
               if (symbolValue !== undefined) {
                 typeInfo.properties![symbolName] = symbolValue.getType(
@@ -594,7 +594,7 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
                   documents,
                   documentASTs,
                   documentSymbols,
-                  documentImports
+                  documentImports,
                 )
               }
             }
@@ -610,7 +610,7 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
           importedSymbols,
           fromImport.source.value,
           type,
-          importedAST
+          importedAST,
         )
         if (symbolValue !== undefined) {
           symbols.set(symbolName, [symbolValue, importedDocument])
@@ -622,7 +622,7 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
           importedSymbols,
           symbolName,
           type,
-          importedAST
+          importedAST,
         )
         if (symbolValue !== undefined) {
           symbols.set(symbolName, [symbolValue, importedDocument])
@@ -658,7 +658,7 @@ export const findSymbol = <K extends SymbolInfo["type"]>(
     importTypes,
   }: { checkCurrent?: boolean; importTypes?: string[] } = {
     checkCurrent: true,
-  }
+  },
 ): [Extract<SymbolInfo, { type: K }>, TextDocument] | [] => {
   const program = documentASTs.get(document.uri)?.program
 
@@ -668,7 +668,7 @@ export const findSymbol = <K extends SymbolInfo["type"]>(
       name,
       type,
       program,
-      inScopeOf
+      inScopeOf,
     )
     if (symbol !== undefined) {
       return [symbol, document]
@@ -683,7 +683,7 @@ export const findSymbol = <K extends SymbolInfo["type"]>(
     documentASTs,
     documentSymbols,
     documentImports,
-    importTypes
+    importTypes,
   )
   return importedSymbols.get(name) ?? []
 }
@@ -705,7 +705,7 @@ export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
   documentImports: Map<
     string,
     (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
-  >
+  >,
 ): Map<string, [Extract<SymbolInfo, { type: K }>, TextDocument]> => {
   const result = new Map<
     string,
@@ -735,7 +735,7 @@ export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
     documents,
     documentASTs,
     documentSymbols,
-    documentImports
+    documentImports,
   )
 
   for (const [key, value] of importedSymbols.entries()) {
@@ -744,7 +744,7 @@ export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
 
   if (type === "Variable") {
     for (const [definerType, specialSymbols] of Object.entries(
-      SPECIAL_SYMBOLS
+      SPECIAL_SYMBOLS,
     )) {
       const parent = parentOfType(node, definerType)
       if (parent !== undefined) {

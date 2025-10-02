@@ -60,7 +60,7 @@ export const getTokens = (statements: ast.Statement[]) => {
         statements.push(
           ifStatement.test,
           ...ifStatement.body,
-          ...ifStatement.alternate
+          ...ifStatement.alternate,
         )
         if (ifStatement.elseIdentifier) {
           items.push({
@@ -77,7 +77,7 @@ export const getTokens = (statements: ast.Statement[]) => {
           forStatement.loopvar,
           forStatement.iterable,
           ...forStatement.body,
-          ...forStatement.defaultBlock
+          ...forStatement.defaultBlock,
         )
         if (forStatement.inToken !== undefined) {
           items.push({
@@ -269,7 +269,7 @@ export const getTokens = (statements: ast.Statement[]) => {
         let tokenType = 9
         if (
           ["true", "false", "none", "True", "False", "None"].includes(
-            identifierStatement.value
+            identifierStatement.value,
           )
         ) {
           // Render built-in constants as macros, the colors match
@@ -325,14 +325,14 @@ export const getTokens = (statements: ast.Statement[]) => {
         const objectLiteralStatement = statement as ast.ObjectLiteral
         statements.push(
           ...objectLiteralStatement.value.keys(),
-          ...objectLiteralStatement.value.values()
+          ...objectLiteralStatement.value.values(),
         )
         break
       case "BinaryExpression":
         const binaryExpressionStatement = statement as ast.BinaryExpression
         statements.push(
           binaryExpressionStatement.left,
-          binaryExpressionStatement.right
+          binaryExpressionStatement.right,
         )
         items.push({
           start: binaryExpressionStatement.operator.start,
@@ -381,7 +381,7 @@ export const getTokens = (statements: ast.Statement[]) => {
         const selectExpressionStatement = statement as ast.SelectExpression
         statements.push(
           selectExpressionStatement.lhs,
-          selectExpressionStatement.test
+          selectExpressionStatement.test,
         )
         if (selectExpressionStatement.ifToken) {
           items.push({
@@ -443,7 +443,7 @@ export const getTokens = (statements: ast.Statement[]) => {
           statement as ast.KeywordArgumentExpression
         statements.push(
           keywordArgumentExpression.key,
-          keywordArgumentExpression.value
+          keywordArgumentExpression.value,
         )
         break
       case "SpreadExpression":
@@ -455,7 +455,7 @@ export const getTokens = (statements: ast.Statement[]) => {
         statements.push(
           callStatement.call,
           ...(callStatement.callerArgs ?? []),
-          ...callStatement.body
+          ...callStatement.body,
         )
         break
       case "Ternary":
@@ -463,7 +463,7 @@ export const getTokens = (statements: ast.Statement[]) => {
         statements.push(
           ternaryStatement.condition,
           ternaryStatement.trueExpr,
-          ternaryStatement.falseExpr
+          ternaryStatement.falseExpr,
         )
         items.push({
           start: ternaryStatement.ifToken.start,

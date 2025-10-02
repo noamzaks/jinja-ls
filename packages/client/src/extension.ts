@@ -27,7 +27,7 @@ export const activate = (context: vscode.ExtensionContext) => {
     "jinja-ls",
     "Jinja Language Server",
     serverOptions,
-    clientOptions
+    clientOptions,
   )
 
   client.start()
@@ -35,7 +35,7 @@ export const activate = (context: vscode.ExtensionContext) => {
   client.onRequest("jinja/readFile", async ({ uri }: { uri: string }) => {
     try {
       const document = await vscode.workspace.openTextDocument(
-        vscode.Uri.parse(uri).fsPath
+        vscode.Uri.parse(uri).fsPath,
       )
       return { contents: document.getText() }
     } catch (e) {

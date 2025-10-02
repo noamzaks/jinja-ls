@@ -33,7 +33,7 @@ export interface TypeReference {
 }
 
 export const resolveType = (
-  type: string | TypeInfo | TypeReference | undefined
+  type: string | TypeInfo | TypeReference | undefined,
 ) => {
   if (typeof type === "string") {
     return BUILTIN_TYPES[type] ?? { name: type }
@@ -62,7 +62,7 @@ export const getType = (
   documentImports: Map<
     string,
     (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
-  >
+  >,
 ): TypeInfo | TypeReference | undefined => {
   if (!expression) {
     return
@@ -90,9 +90,9 @@ export const getType = (
             documents,
             documentASTs,
             documentSymbols,
-            documentImports
+            documentImports,
           ),
-        ])
+        ]),
       ),
       literalValue: formatExpression(expression),
     }
@@ -110,7 +110,7 @@ export const getType = (
           documents,
           documentASTs,
           documentSymbols,
-          documentImports
+          documentImports,
         )
       }
     }
@@ -133,8 +133,8 @@ export const getType = (
           documents,
           documentASTs,
           documentSymbols,
-          documentImports
-        )
+          documentImports,
+        ),
       )
       let propertyName = (
         memberExpression.property as
@@ -163,8 +163,8 @@ export const getType = (
         documents,
         documentASTs,
         documentSymbols,
-        documentImports
-      )
+        documentImports,
+      ),
     )
     if (calleeType?.signature !== undefined) {
       return resolveType(calleeType.signature.return)
@@ -178,7 +178,7 @@ export const getType = (
       documents,
       documentASTs,
       documentSymbols,
-      documentImports
+      documentImports,
     )
     if (symbol !== undefined && symbolDocument !== undefined) {
       return symbol.getType(
@@ -186,7 +186,7 @@ export const getType = (
         documents,
         documentASTs,
         documentSymbols,
-        documentImports
+        documentImports,
       )
     }
   }

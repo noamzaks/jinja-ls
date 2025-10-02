@@ -14,7 +14,7 @@ async function main() {
       "..",
       "packages",
       "clinet",
-      "fixture"
+      "fixture",
     )
 
     await runTests({

@@ -17,7 +17,7 @@ export async function activate(docUri: vscode.Uri) {
     doc = await vscode.workspace.openTextDocument(docUri)
     if (
       !vscode.window.visibleTextEditors.some(
-        (editor) => editor.document === doc
+        (editor) => editor.document === doc,
       )
     ) {
       editor = await vscode.window.showTextDocument(doc, { preview: false })

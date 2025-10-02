@@ -4272,7 +4272,7 @@ describe("Templates", () => {
           EXPECTED_OUTPUTS[name] === undefined
         ) {
           console.warn(
-            `Skipping test case "${name}" due to missing context or expected output`
+            `Skipping test case "${name}" due to missing context or expected output`,
           )
           continue
         }
@@ -4400,7 +4400,7 @@ describe("Error checking", () => {
       env.set("non_iterable", 10)
 
       const tokens = tokenize(
-        "{% for item in non_iterable %}{{ item }}{% endfor %}"
+        "{% for item in non_iterable %}{{ item }}{% endfor %}",
       )
       const ast = parse(tokens)
       expect(() => interpreter.run(ast)).toThrowError()

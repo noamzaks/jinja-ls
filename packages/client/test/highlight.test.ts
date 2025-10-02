@@ -79,11 +79,11 @@ const getTokens = async (docUri: vscode.Uri) => {
   const document = await vscode.workspace.openTextDocument(docUri)
   const legend = (await vscode.commands.executeCommand(
     "vscode.provideDocumentSemanticTokensLegend",
-    docUri
+    docUri,
   )) as vscode.SemanticTokensLegend
   const tokens = (await vscode.commands.executeCommand(
     "vscode.provideDocumentSemanticTokens",
-    docUri
+    docUri,
   )) as vscode.SemanticTokens
   const resolvedTokens = []
   let previousLine = 0
@@ -97,7 +97,7 @@ const getTokens = async (docUri: vscode.Uri) => {
         ? previousCharacter + characterDelta
         : characterDelta
     const start = document.offsetAt(
-      new vscode.Position(currentLine, currentCharacter)
+      new vscode.Position(currentLine, currentCharacter),
     )
     previousLine = currentLine
     previousCharacter = currentCharacter

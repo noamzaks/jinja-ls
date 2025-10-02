@@ -51,7 +51,7 @@ export class Token {
     public value: string,
     public type: TokenType,
     public start: number,
-    public end: number
+    public end: number,
   ) {}
 }
 
@@ -59,7 +59,7 @@ export class LexerError {
   constructor(
     public message: string,
     public start: number,
-    public end: number
+    public end: number,
   ) {}
 }
 
@@ -144,17 +144,17 @@ export function tokenize(source: string, options: PreprocessOptions): Token[]
 export function tokenize(
   source: string,
   options: PreprocessOptions,
-  safe: false
+  safe: false,
 ): Token[]
 export function tokenize(
   source: string,
   options: PreprocessOptions,
-  safe: true
+  safe: true,
 ): [Token[], LexerError[]]
 export function tokenize(
   source: string,
   options: PreprocessOptions = {},
-  safe = false
+  safe = false,
 ): Token[] | [Token[], LexerError[]] {
   const tokens: Token[] = []
   const errors: LexerError[] = []
@@ -169,7 +169,7 @@ export function tokenize(
       value,
       type,
       previousCursorPosition,
-      cursorPosition
+      cursorPosition,
     )
     previousCursorPosition = cursorPosition
     const match = /^[ \t]+/.exec(source.slice(previousCursorPosition))
@@ -181,7 +181,7 @@ export function tokenize(
 
   const consumeWhile = (
     predicate: (char: string) => boolean,
-    label?: string
+    label?: string,
   ): string => {
     let str = ""
     while (predicate(source[cursorPosition])) {
@@ -195,8 +195,8 @@ export function tokenize(
             new LexerError(
               "Missing escaped character",
               cursorPosition - 1,
-              source.length
-            )
+              source.length,
+            ),
           )
           return str
         }
@@ -209,8 +209,8 @@ export function tokenize(
             new LexerError(
               `Invalid escaped character: ${escaped}`,
               cursorPosition - 2,
-              cursorPosition
-            )
+              cursorPosition,
+            ),
           )
           continue
         }
@@ -244,7 +244,7 @@ export function tokenize(
       if (insideRaw) {
         const rawStart = cursorPosition
         const match = /{%[ \t]*endraw[ \t]*%}/.exec(
-          source.slice(cursorPosition)
+          source.slice(cursorPosition),
         )
         if (match) {
           cursorPosition += match.index
@@ -315,8 +315,8 @@ export function tokenize(
             new LexerError(
               "Missing end of comment tag",
               source.length,
-              source.length
-            )
+              source.length,
+            ),
           )
           // Make sure to take the last character as well
           comment += source.slice(cursorPosition)
@@ -376,8 +376,8 @@ export function tokenize(
               `${char}${num}`,
               num.length > 0
                 ? TOKEN_TYPES.NumericLiteral
-                : TOKEN_TYPES.UnaryOperator
-            )
+                : TOKEN_TYPES.UnaryOperator,
+            ),
           )
           continue
         }
@@ -480,8 +480,8 @@ export function tokenize(
       new LexerError(
         `Unexpected character: ${char}`,
         cursorPosition,
-        cursorPosition
-      )
+        cursorPosition,
+      ),
     )
     cursorPosition++
     // Ignore this character

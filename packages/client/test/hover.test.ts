@@ -7,7 +7,7 @@ suite("Should provide hover", () => {
 
   test("Returns hover information for errors.jinja", async () => {
     expect(
-      await getHover(errorsUri, new vscode.Position(27, 15))
+      await getHover(errorsUri, new vscode.Position(27, 15)),
     ).toMatchObject({
       contents: ["```python\n(start: int, stop: int, step: int) -> range\n```"],
       range: [
@@ -23,7 +23,7 @@ suite("Should provide hover", () => {
           { character: 3, line: 23 },
           { character: 10, line: 23 },
         ],
-      }
+      },
     )
   })
 })
@@ -33,7 +33,7 @@ export const getHover = async (uri: vscode.Uri, position: vscode.Position) => {
   const hovers: vscode.Hover[] = await vscode.commands.executeCommand(
     "vscode.executeHoverProvider",
     uri,
-    position
+    position,
   )
   expect(hovers.length).toEqual(1)
   const hover = hovers[0]

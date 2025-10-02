@@ -3,9 +3,7 @@
     "module": "esnext",
     "moduleResolution": "node",
     "target": "ES2024",
-    "lib": [
-      "ES2024"
-    ],
+    "lib": ["ES2024"],
     "outDir": "dist",
     "sourceMap": true,
     "skipLibCheck": true,
@@ -14,9 +12,7 @@
   "include": [
     "packages/client/src",
     "packages/language/src",
-    "packages/server/src",
+    "packages/server/src"
   ],
-  "exclude": [
-    ".vscode-test"
-  ]
+  "exclude": [".vscode-test"]
 }

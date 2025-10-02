@@ -8,7 +8,7 @@ suite("Should provide completions", () => {
 
   test("Returns completions for errors.jinja", async () => {
     expect(
-      await getCompletions(errorsUri, new vscode.Position(20, 8), "u")
+      await getCompletions(errorsUri, new vscode.Position(20, 8), "u"),
     ).toMatchObject([
       {
         label: "unique",
@@ -29,7 +29,7 @@ suite("Should provide completions", () => {
     ])
 
     expect(
-      await getCompletions(errorsUri, new vscode.Position(21, 9), "o")
+      await getCompletions(errorsUri, new vscode.Position(21, 9), "o"),
     ).toMatchObject([
       {
         label: "odd",
@@ -38,7 +38,7 @@ suite("Should provide completions", () => {
     ])
 
     expect(
-      await getCompletions(errorsUri, new vscode.Position(23, 11))
+      await getCompletions(errorsUri, new vscode.Position(23, 11)),
     ).toMatchObject([
       {
         label: "arguments",
@@ -67,14 +67,14 @@ suite("Should provide completions", () => {
 export const getCompletions = async (
   uri: vscode.Uri,
   position: vscode.Position,
-  startingWith: string = ""
+  startingWith: string = "",
 ) => {
   await activate(uri)
   const completions: vscode.CompletionList =
     await vscode.commands.executeCommand(
       "vscode.executeCompletionItemProvider",
       uri,
-      position
+      position,
     )
   return completions.items
     .map((item) => JSON.parse(JSON.stringify(item)))

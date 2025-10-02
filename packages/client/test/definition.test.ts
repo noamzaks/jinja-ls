@@ -21,14 +21,14 @@ suite("Should provide go to definition", () => {
 
 export const getDefinition = async (
   uri: vscode.Uri,
-  position: vscode.Position
+  position: vscode.Position,
 ) => {
   await activate(uri)
   const locations: (vscode.Location | vscode.LocationLink)[] =
     await vscode.commands.executeCommand(
       "vscode.executeDefinitionProvider",
       uri,
-      position
+      position,
     )
   expect(locations.length).toEqual(1)
   const location = locations[0]
