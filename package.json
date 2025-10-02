@@ -63,7 +63,8 @@
     "compile": "rollup -c",
     "watch": "rollup -c -w",
     "package": "npm run compile && vsce package --no-dependencies",
-    "test": "npm run compile && node dist/tests/run.js"
+    "test-e2e": "npm run compile && node dist/tests/run.js",
+    "test-language": "vitest run --root packages/language"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.6",
@@ -73,6 +74,7 @@
     "@types/node": "^24.5.2",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.6.2",
+    "prettier": "^3.6.2",
     "rollup": "^4.52.3",
     "tslib": "^2.8.1",
     "typescript": "^5.9.2"

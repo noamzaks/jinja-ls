@@ -3,6 +3,7 @@
     <br />
     <img src="https://img.shields.io/badge/license-MIT-blue.svg">
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg">
+    <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/noamzaks/jinja-ls/check.yml">
     <br />
 </h1>
 
