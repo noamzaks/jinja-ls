@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "module": "esnext",
+        "moduleResolution": "node",
+        "target": "ES2024",
+        "lib": [
+            "ES2024"
+        ],
+        "outDir": "../../../../dist/tests",
+        "sourceMap": true,
+        "skipLibCheck": true,
+        "allowSyntheticDefaultImports": true
+    },
+    "include": [
+        "..",
+    ],
+    "exclude": [
+        ".vscode-test"
+    ]
+}

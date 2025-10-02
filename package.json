@@ -1,5 +1,6 @@
 {
   "name": "jinja-ls",
+  "displayName": "Jinja Language Server",
   "description": "Feature-rich language server for Jinja.",
   "version": "0.0.1",
   "author": "Noam Zaks <noam@noamzaks.com> (https://noamzaks.com/)",
@@ -11,7 +12,7 @@
   "workspaces": [
     "packages/*"
   ],
-  "publisher": "vscode",
+  "publisher": "noamzaks",
   "engines": {
     "vscode": "^1.100.0"
   },
@@ -61,13 +62,16 @@
   "scripts": {
     "compile": "rollup -c",
     "watch": "rollup -c -w",
-    "package": "npm run compile && vsce package --no-dependencies"
+    "package": "npm run compile && vsce package --no-dependencies",
+    "test": "npm run compile && node dist/tests/run.js"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-json": "^6.1.0",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-typescript": "^12.1.4",
     "@types/node": "^24.5.2",
+    "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.6.2",
     "rollup": "^4.52.3",
     "tslib": "^2.8.1",

@@ -11,8 +11,8 @@
 				"--extensionDevelopmentPath=${workspaceRoot}"
 			],
 			"outFiles": [
-				"${workspaceRoot}/packages/client/out/**/*.js",
-				"${workspaceRoot}/packages/server/out/**/*.js"
+				"${workspaceRoot}/dist/**/*.js",
+				"${workspaceRoot}/dist/**/*.js"
 			],
 			"autoAttachChildProcesses": true,
 		}

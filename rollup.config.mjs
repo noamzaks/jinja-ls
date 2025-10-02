@@ -1,11 +1,14 @@
 import commonjs from "@rollup/plugin-commonjs"
+import json from "@rollup/plugin-json"
 import resolve from "@rollup/plugin-node-resolve"
 import typescript from "@rollup/plugin-typescript"
+import { globSync } from "fs"
 
 const plugins = [
   resolve(),
   commonjs(),
   typescript({ tsconfig: "./tsconfig.json" }),
+  json(),
 ]
 
 export default [
@@ -30,5 +33,15 @@ export default [
       },
     ],
     plugins,
+  },
+  {
+    input: globSync("packages/client/src/test/*.ts"),
+    output: {
+      format: "cjs",
+      dir: "dist/tests",
+    },
+    plugins: [
+      typescript({ tsconfig: "./packages/client/src/test/tsconfig.json" }),
+    ],
   },
 ]

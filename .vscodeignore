@@ -1,6 +1,7 @@
 **
 !package.json
-!dist/*.js
+!dist/server.js
+!dist/extension.js
 !language-configuration.json
 !syntaxes/*
 !README.md
