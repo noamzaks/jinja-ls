@@ -15,10 +15,6 @@
 				"${workspaceRoot}/packages/server/out/**/*.js"
 			],
 			"autoAttachChildProcesses": true,
-			"preLaunchTask": {
-				"type": "npm",
-				"script": "watch"
-			}
 		}
 	]
 }
