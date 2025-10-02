@@ -1,8 +1,8 @@
 {
-  "name": "jinja-ls-language",
+  "name": "@jinja-ls/language",
   "version": "0.0.1",
   "private": true,
-  "main": "./out/index.js",
+  "main": "./src/index.ts",
   "scripts": {
     "test": "vitest run"
   },

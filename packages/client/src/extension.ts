@@ -6,9 +6,7 @@ import * as lsp from "vscode-languageclient/node"
 let client: lsp.LanguageClient
 
 export const activate = (context: vscode.ExtensionContext) => {
-  const serverModule = context.asAbsolutePath(
-    path.join("packages", "server", "out", "server.js")
-  )
+  const serverModule = context.asAbsolutePath(path.join("dist", "server.js"))
 
   const serverOptions: lsp.ServerOptions = {
     run: { module: serverModule, transport: lsp.TransportKind.ipc },

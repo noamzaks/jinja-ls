@@ -1,8 +1,8 @@
+import { ast, LexerError, parse, tokenize } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { createConnection } from "vscode-languageserver/node"
 import { URI, Utils } from "vscode-uri"
-import { ast, LexerError, parse, tokenize } from "../../language"
 import { filters, tests } from "./generated"
 import { getTokens, legend } from "./semantic"
 import {

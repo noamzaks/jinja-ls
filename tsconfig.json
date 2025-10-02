@@ -1,31 +1,21 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "esnext",
+    "moduleResolution": "node",
     "target": "ES2024",
     "lib": [
       "ES2024"
     ],
-    "outDir": "out",
-    "rootDir": "src",
+    "outDir": "dist",
     "sourceMap": true,
     "skipLibCheck": true
   },
   "include": [
-    "src"
+    "packages/client/src",
+    "packages/language/src",
+    "packages/server/src",
   ],
   "exclude": [
-    "node_modules",
     ".vscode-test"
-  ],
-  "references": [
-    {
-      "path": "./packages/language"
-    },
-    {
-      "path": "./packages/server"
-    },
-    {
-      "path": "./packages/client"
-    },
   ]
 }

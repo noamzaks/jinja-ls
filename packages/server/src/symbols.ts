@@ -1,6 +1,6 @@
+import { ast, formatExpression, LexerError } from "@jinja-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { URI, Utils } from "vscode-uri"
-import { ast, formatExpression, LexerError } from "../../language"
 import { ArgumentInfo, getType, TypeInfo, TypeReference } from "./types"
 import { parentOfType } from "./utilities"
 
