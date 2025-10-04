@@ -446,6 +446,11 @@ export class ArrayLiteral extends Literal<Expression[]> {
  */
 export class TupleLiteral extends Literal<Expression[]> {
   override type = "TupleLiteral"
+
+  constructor(value: Expression[]) {
+    super(value)
+    this.addChildren(...value)
+  }
 }
 
 /**

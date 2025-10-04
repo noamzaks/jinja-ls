@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The extension now depends on jinjahtml-vscode for language definitions.
 
+### Fixed
+
+- Show hover information for tuple items.
+
 ## [0.0.2] - 2025-10-04
 
 ### Added
