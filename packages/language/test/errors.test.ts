@@ -522,7 +522,7 @@ const PARSER_ERRORS = Object.freeze({
 
 describe("Lexing error recovery", () => {
   for (const [name, test] of Object.entries(LEXER_ERRORS)) {
-    it(`should recover and report errors ${name}`, () => {
+    it(`should recover and report lexer errors ${name}`, () => {
       const [tokens, errors] = tokenize(test.text, {}, true)
       expect(errors).toEqual(test.errors)
       expect(tokens).toEqual(test.tokens)
@@ -534,9 +534,9 @@ describe("Lexing error recovery", () => {
 
 describe("Parsing error recovery", () => {
   for (const [name, test] of Object.entries(PARSER_ERRORS)) {
-    it(`should recover and report errors ${name}`, () => {
+    it(`should recover and report parser errors ${name}`, () => {
       const [tokens] = tokenize(test.text, {}, true)
-      const [_nodes, errors] = parse(tokens, true)
+      const [_nodes, _tokenNodes, errors] = parse(tokens, true)
       expect(errors).toMatchObject(test.errors)
     })
   }
