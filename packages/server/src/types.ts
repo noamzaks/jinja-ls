@@ -36,7 +36,7 @@ export interface TypeReference {
 
 export const resolveType = (
   type: string | TypeInfo | TypeReference | undefined,
-) => {
+): TypeInfo | undefined => {
   if (typeof type === "string") {
     return BUILTIN_TYPES[type] ?? { name: type }
   }

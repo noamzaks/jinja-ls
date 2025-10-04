@@ -129,7 +129,7 @@ export const collectSymbols = (
         identifierNode: loopvarIdentifier,
         getType: (document) =>
           resolveType(
-            resolveType(getType(statement.iterable, document)).elementType,
+            resolveType(getType(statement.iterable, document))?.elementType,
           ),
       })
     } else {
@@ -142,10 +142,10 @@ export const collectSymbols = (
             identifierNode: loopvarTupleItem,
             getType: (document) =>
               resolveType(
-                resolveType(
+                (resolveType(
                   resolveType(getType(statement.iterable, document))
-                    .elementType,
-                ).properties[index],
+                    ?.elementType,
+                )?.properties ?? [])[index],
               ),
           })
         }
