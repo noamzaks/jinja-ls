@@ -19,6 +19,8 @@ export interface TypeInfo {
   // If the type is callable, this is its signature.
   name: string
   signature?: SignatureInfo
+  // For iterables, this is the type of the elements
+  elementType?: TypeInfo | TypeReference | string
   properties?: Record<string, TypeInfo | string | TypeReference | undefined>
   // If the value is known
   literalValue?: string
@@ -64,15 +66,29 @@ export const getType = (
     expression instanceof ast.ArrayLiteral ||
     expression instanceof ast.TupleLiteral
   ) {
+    const properties = Object.fromEntries(
+      expression.value.map((expression, index) => [
+        index.toString(),
+        getType(expression, document),
+      ]),
+    )
+    let elementType: TypeInfo | undefined = undefined
+    const values = Object.values(properties)
+    const firstType = resolveType(values[0])
+    if (
+      values.length !== 0 &&
+      values.every((p) => resolveType(p).name === firstType.name)
+    ) {
+      elementType = firstType
+      if (elementType.literalValue) {
+        delete elementType.literalValue
+      }
+    }
     return {
       name: expression.type === "ArrayLiteral" ? "list" : "tuple",
-      properties: Object.fromEntries(
-        expression.value.map((expression, index) => [
-          index.toString(),
-          getType(expression, document),
-        ]),
-      ),
+      properties,
       literalValue: formatExpression(expression),
+      elementType,
     }
   } else if (expression instanceof ast.ObjectLiteral) {
     const properties: Record<

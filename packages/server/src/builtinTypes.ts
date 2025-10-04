@@ -269,6 +269,7 @@ export const BUILTIN_TYPES: Record<string, TypeInfo> = {
         },
       },
     },
+    elementType: "str",
   },
   int: {
     name: "int",

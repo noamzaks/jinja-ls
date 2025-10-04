@@ -7,7 +7,13 @@ import {
   documents,
   documentSymbols,
 } from "./state"
-import { ArgumentInfo, getType, TypeInfo, TypeReference } from "./types"
+import {
+  ArgumentInfo,
+  getType,
+  resolveType,
+  TypeInfo,
+  TypeReference,
+} from "./types"
 import { parentOfType } from "./utilities"
 
 export type SymbolInfo =
@@ -121,22 +127,29 @@ export const collectSymbols = (
         type: "Variable",
         node: statement.loopvar,
         identifierNode: loopvarIdentifier,
-        // TODO
-        getType: () => undefined,
+        getType: (document) =>
+          resolveType(
+            resolveType(getType(statement.iterable, document)).elementType,
+          ),
       })
     } else {
       const loopvarTuple = statement.loopvar
-      for (const loopvarTupleItem of loopvarTuple.value) {
+      loopvarTuple.value.forEach((loopvarTupleItem, index) => {
         if (loopvarTupleItem instanceof ast.Identifier) {
           addSymbol(loopvarTupleItem.value, {
             type: "Variable",
             node: statement.loopvar,
             identifierNode: loopvarTupleItem,
-            // TODO
-            getType: () => undefined,
+            getType: (document) =>
+              resolveType(
+                resolveType(
+                  resolveType(getType(statement.iterable, document))
+                    .elementType,
+                ).properties[index],
+              ),
           })
         }
-      }
+      })
     }
   } else if (statement instanceof ast.SetStatement) {
     if (statement.assignee instanceof ast.Identifier) {
@@ -250,7 +263,10 @@ const SPECIAL_SYMBOLS: Record<
             type: "int",
           },
         ],
-        return: "range",
+        return: {
+          name: "range",
+          elementType: "int",
+        },
       },
     },
     dict: {

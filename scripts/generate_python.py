@@ -13,6 +13,13 @@ def get_types(objects: List[Any]):
         typename = type(s).__name__
         result[typename] = {"name": typename, "properties": {}}
 
+        try:
+            for x in s:
+                if type(x) in builtin_types:
+                    result[typename]["elementType"] = type(x).__name__
+        except Exception:
+            pass
+
         for pname in dir(s):
             if pname.startswith("_"):
                 continue
