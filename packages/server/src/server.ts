@@ -282,7 +282,6 @@ connection.onHover(async (params) => {
         const contents: lsp.MarkedString[] = [
           {
             language: "python",
-            // TODO: arguments
             value: stringifySignatureInfo(resolvedType.signature),
           },
         ]
@@ -616,23 +615,6 @@ connection.onSignatureHelp(async (params) => {
             activeParameter,
           } satisfies lsp.SignatureHelp
         }
-      }
-
-      const symbolType = resolveType(getType(callExpression.callee, document))
-      if (symbolType?.signature !== undefined) {
-        return {
-          signatures: [
-            lsp.SignatureInformation.create(
-              stringifySignatureInfo(symbolType.signature),
-              symbolType.signature.documentation,
-              // TODO
-              // ...parameters
-            ),
-          ],
-          activeSignature: 0,
-          // TODO
-          // activeParameter,
-        } satisfies lsp.SignatureHelp
       }
     }
   }

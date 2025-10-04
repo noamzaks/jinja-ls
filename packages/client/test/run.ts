@@ -4,7 +4,10 @@ import { runTests } from "@vscode/test-electron"
 
 async function main() {
   try {
-    const extensionDevelopmentPath = path.resolve(__dirname, "../../")
+    const extensionDevelopmentPath = [
+      path.resolve(__dirname, "..", ".."),
+      path.resolve(__dirname, "..", "..", "..", "jinjahtml-vscode"),
+    ]
 
     const extensionTestsPath = __dirname
 

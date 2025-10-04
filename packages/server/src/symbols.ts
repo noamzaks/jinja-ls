@@ -452,10 +452,7 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
     }
   }
 
-  // TODO: remove sorting here
-  const symbolOptions = (symbols?.get(name) ?? []).sort(
-    (a, b) => (a.node?.getStart() ?? 0) - (b.node?.getStart() ?? 0),
-  )
+  const symbolOptions = symbols?.get(name) ?? []
 
   // Look from the last to the first definition of this symbol to find the last one.
   for (const symbol of symbolOptions.reverse()) {

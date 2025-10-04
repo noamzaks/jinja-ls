@@ -1,6 +1,5 @@
 import { ast } from "@jinja-ls/language"
 
-// TODO: why is this not sorted?
 export const walk = (
   program: ast.Program,
   callback: (statement: ast.Node) => boolean | void,

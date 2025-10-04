@@ -47,6 +47,7 @@ suite("Should provide completions", () => {
         label: "urlize",
         kind: "Function",
       },
+      {},
     ])
 
     expect(
@@ -108,5 +109,7 @@ export const getCompletions = async (
     )
   return completions.items
     .map((item) => JSON.parse(JSON.stringify(item)))
-    .filter((item) => item.label.startsWith(startingWith))
+    .filter((item) =>
+      (item.label?.label ?? item.label).startsWith(startingWith),
+    )
 }
