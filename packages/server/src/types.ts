@@ -54,57 +54,49 @@ export const getType = (
     return
   }
 
-  if (expression.type === "StringLiteral") {
+  if (expression instanceof ast.StringLiteral) {
     return { type: "str", literalValue: formatExpression(expression) }
-  } else if (expression.type === "IntegerLiteral") {
+  } else if (expression instanceof ast.IntegerLiteral) {
     return { type: "int", literalValue: formatExpression(expression) }
-  } else if (expression.type === "FloatLiteral") {
+  } else if (expression instanceof ast.FloatLiteral) {
     return { type: "float", literalValue: formatExpression(expression) }
   } else if (
-    expression.type === "ArrayLiteral" ||
-    expression.type === "TupleLiteral"
+    expression instanceof ast.ArrayLiteral ||
+    expression instanceof ast.TupleLiteral
   ) {
-    const arrayOrTuple = expression as ast.ArrayLiteral | ast.TupleLiteral
     return {
       name: expression.type === "ArrayLiteral" ? "list" : "tuple",
       properties: Object.fromEntries(
-        arrayOrTuple.value.map((expression, index) => [
+        expression.value.map((expression, index) => [
           index.toString(),
           getType(expression, document),
         ]),
       ),
       literalValue: formatExpression(expression),
     }
-  } else if (expression.type === "ObjectLiteral") {
-    const objectLiteral = expression as ast.ObjectLiteral
+  } else if (expression instanceof ast.ObjectLiteral) {
     const properties: Record<
       string,
       TypeInfo | TypeReference | string | undefined
     > = {}
-    for (const [key, value] of objectLiteral.value.entries()) {
-      if (key.type === "StringLiteral") {
-        properties[(key as ast.StringLiteral).value] = getType(value, document)
+    for (const [key, value] of expression.value.entries()) {
+      if (key instanceof ast.StringLiteral) {
+        properties[key.value] = getType(value, document)
       }
     }
     return {
       name: "dict",
       properties,
-      literalValue: formatExpression(objectLiteral),
+      literalValue: formatExpression(expression),
     }
-  } else if (expression.type === "MemberExpression") {
-    const memberExpression = expression as ast.MemberExpression
+  } else if (expression instanceof ast.MemberExpression) {
     if (
-      memberExpression.property.type === "StringLiteral" ||
-      memberExpression.property.type === "Identifier" ||
-      memberExpression.property.type === "IntegerLiteral"
+      expression.property instanceof ast.StringLiteral ||
+      expression.property instanceof ast.Identifier ||
+      expression.property instanceof ast.IntegerLiteral
     ) {
-      const objectType = resolveType(getType(memberExpression.object, document))
-      let propertyName = (
-        memberExpression.property as
-          | ast.StringLiteral
-          | ast.Identifier
-          | ast.IntegerLiteral
-      ).value
+      const objectType = resolveType(getType(expression.object, document))
+      let propertyName = expression.property.value
       if (typeof propertyName === "number" && propertyName < 0) {
         propertyName =
           Object.keys(objectType?.properties ?? {}).length + propertyName
@@ -117,17 +109,16 @@ export const getType = (
         return memberType
       }
     }
-  } else if (expression.type === "CallExpression") {
-    const callExpression = expression as ast.CallExpression
-    const calleeType = resolveType(getType(callExpression.callee, document))
+  } else if (expression instanceof ast.CallExpression) {
+    const calleeType = resolveType(getType(expression.callee, document))
     if (calleeType?.signature !== undefined) {
       return resolveType(calleeType.signature.return)
     }
-  } else if (expression.type === "Identifier") {
+  } else if (expression instanceof ast.Identifier) {
     const [symbol, symbolDocument] = findSymbol(
       document,
       expression,
-      (expression as ast.Identifier).value,
+      expression.value,
       "Variable",
     )
     if (symbol !== undefined && symbolDocument !== undefined) {

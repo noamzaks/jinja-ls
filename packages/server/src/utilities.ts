@@ -18,16 +18,15 @@ export const walk = (
 export const tokenAt = (program: ast.Program, offset: number) => {
   let token: ast.TokenNode | undefined
   walk(program, (statement) => {
-    if (statement.type === "TokenNode") {
-      const statementToken = statement as ast.TokenNode
-      if (statementToken.start <= offset && offset <= statementToken.end) {
-        token = statementToken
+    if (statement instanceof ast.TokenNode) {
+      if (statement.start <= offset && offset <= statement.end) {
+        token = statement
         return true
       } else if (
-        statementToken.start <= offset &&
-        (token === undefined || statementToken.end > token.end)
+        statement.start <= offset &&
+        (token === undefined || statement.end > token.end)
       ) {
-        token = statementToken
+        token = statement
       }
     }
   })

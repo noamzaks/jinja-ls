@@ -77,14 +77,15 @@ suite("Should provide file details", () => {
 const getTokens = async (docUri: vscode.Uri) => {
   await activate(docUri)
   const document = await vscode.workspace.openTextDocument(docUri)
-  const legend = (await vscode.commands.executeCommand(
-    "vscode.provideDocumentSemanticTokensLegend",
-    docUri,
-  )) as vscode.SemanticTokensLegend
-  const tokens = (await vscode.commands.executeCommand(
+  const legend: vscode.SemanticTokensLegend =
+    await vscode.commands.executeCommand(
+      "vscode.provideDocumentSemanticTokensLegend",
+      docUri,
+    )
+  const tokens: vscode.SemanticTokens = await vscode.commands.executeCommand(
     "vscode.provideDocumentSemanticTokens",
     docUri,
-  )) as vscode.SemanticTokens
+  )
   const resolvedTokens = []
   let previousLine = 0
   let previousCharacter = 0

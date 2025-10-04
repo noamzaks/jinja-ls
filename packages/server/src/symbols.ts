@@ -27,11 +27,11 @@ export type SymbolInfo =
     }
 
 export const argToArgumentInfo = (arg: ast.Expression): ArgumentInfo => {
-  if (arg.type === "Identifier") {
-    return { name: arg.identifierName! }
+  if (arg instanceof ast.Identifier) {
+    return { name: arg.identifierName }
   }
   const kwarg = arg as ast.KeywordArgumentExpression
-  return { name: arg.identifierName!, default: formatExpression(kwarg.value) }
+  return { name: kwarg.identifierName, default: formatExpression(kwarg.value) }
 }
 
 export const collectSymbols = (
@@ -45,16 +45,15 @@ export const collectSymbols = (
     result.set(name, values)
   }
 
-  if (statement.type === "Macro") {
-    const macroStatement = statement as ast.Macro
-    addSymbol(macroStatement.name.value, {
+  if (statement instanceof ast.Macro) {
+    addSymbol(statement.name.value, {
       type: "Macro",
-      node: macroStatement,
+      node: statement,
     })
-    addSymbol(macroStatement.name.value, {
+    addSymbol(statement.name.value, {
       type: "Variable",
-      node: macroStatement,
-      identifierNode: macroStatement.name,
+      node: statement,
+      identifierNode: statement.name,
       getType: () => ({
         name: "macro",
         properties: {
@@ -64,7 +63,7 @@ export const collectSymbols = (
             documentation:
               "A tuple of the names of arguments the macro accepts.",
             properties: Object.fromEntries(
-              macroStatement.args.map((arg, index) => [
+              statement.args.map((arg, index) => [
                 index.toString(),
                 {
                   type: "str",
@@ -90,96 +89,81 @@ export const collectSymbols = (
           },
         },
         signature: {
-          arguments: macroStatement.args.map(argToArgumentInfo),
+          arguments: statement.args.map(argToArgumentInfo),
           return: "str",
         },
       }),
     })
-    for (const argument of macroStatement.args) {
-      addSymbol(argument.identifierName!, {
+    for (const argument of statement.args) {
+      addSymbol(argument.identifierName, {
         type: "Variable",
         // Scoped to be inside the macro
-        node: macroStatement.name,
+        node: statement.name,
         identifierNode:
-          argument.type === "Identifier"
-            ? (argument as ast.Identifier)
+          argument instanceof ast.Identifier
+            ? argument
             : (argument as ast.KeywordArgumentExpression).key,
         getType: (document) =>
-          argument.type === "KeywordArgumentExpression"
-            ? getType(
-                (argument as ast.KeywordArgumentExpression).value,
-                document,
-              )
+          argument instanceof ast.KeywordArgumentExpression
+            ? getType(argument.value, document)
             : undefined,
       })
     }
-  } else if (statement.type === "Block") {
-    const blockStatement = statement as ast.Block
-    addSymbol(blockStatement.name.value, {
+  } else if (statement instanceof ast.Block) {
+    addSymbol(statement.name.value, {
       type: "Block",
-      node: blockStatement,
+      node: statement,
     })
-  } else if (statement.type === "For") {
-    const forStatement = statement as ast.For
-    if (forStatement.loopvar.type === "Identifier") {
-      const loopvarIdentifier = forStatement.loopvar as ast.Identifier
+  } else if (statement instanceof ast.For) {
+    if (statement.loopvar instanceof ast.Identifier) {
+      const loopvarIdentifier = statement.loopvar
       addSymbol(loopvarIdentifier.value, {
         type: "Variable",
-        node: forStatement.loopvar,
+        node: statement.loopvar,
         identifierNode: loopvarIdentifier,
         // TODO
         getType: () => undefined,
       })
     } else {
-      const loopvarTuple = forStatement.loopvar as ast.TupleLiteral
+      const loopvarTuple = statement.loopvar
       for (const loopvarTupleItem of loopvarTuple.value) {
-        if (loopvarTupleItem.type === "Identifier") {
-          const loopvarTupleItemIdentifier = loopvarTupleItem as ast.Identifier
-          addSymbol(loopvarTupleItemIdentifier.value, {
+        if (loopvarTupleItem instanceof ast.Identifier) {
+          addSymbol(loopvarTupleItem.value, {
             type: "Variable",
-            node: forStatement.loopvar,
-            identifierNode: loopvarTupleItemIdentifier,
+            node: statement.loopvar,
+            identifierNode: loopvarTupleItem,
             // TODO
             getType: () => undefined,
           })
         }
       }
     }
-  } else if (statement.type === "Set") {
-    const setStatement = statement as ast.SetStatement
-    if (setStatement.assignee.type === "Identifier") {
-      const variableIdentifier = setStatement.assignee as ast.Identifier
+  } else if (statement instanceof ast.SetStatement) {
+    if (statement.assignee instanceof ast.Identifier) {
+      const variableIdentifier = statement.assignee
       const variable = variableIdentifier.value
       addSymbol(variable, {
         type: "Variable",
-        node: setStatement,
+        node: statement,
         identifierNode: variableIdentifier,
-        getType: (document) => getType(setStatement.value, document),
+        getType: (document) => getType(statement.value, document),
       })
     }
   } else if (
-    statement.type === "Import" ||
-    statement.type === "Include" ||
-    statement.type === "FromImport" ||
-    statement.type === "Extends"
+    statement instanceof ast.Import ||
+    statement instanceof ast.Include ||
+    statement instanceof ast.FromImport ||
+    statement instanceof ast.Extends
   ) {
-    const s = statement as
-      | ast.Import
-      | ast.Include
-      | ast.FromImport
-      | ast.Extends
-
-    imports.push(s)
+    imports.push(statement)
   }
 }
 
 export const argToPython = (arg: ast.Statement) => {
-  if (arg.type === "Identifier") {
-    const identifier = arg as ast.Identifier
-    return identifier.token.value
-  } else if (arg.type === "KeywordArgumentExpression") {
-    const kwarg = arg as ast.KeywordArgumentExpression
-    return `${kwarg.key.token.value} = ${formatExpression(kwarg.value)}`
+  if (arg instanceof ast.Identifier) {
+    return arg.token.value
+  } else if (arg instanceof ast.KeywordArgumentExpression) {
+    return `${arg.key.token.value} = ${formatExpression(arg.value)}`
   }
 }
 
@@ -187,22 +171,14 @@ export const importToUri = (
   i: ast.Include | ast.Import | ast.FromImport | ast.Extends,
   uri: string,
 ) => {
-  if (i.source.type !== "StringLiteral") {
+  if (!(i.source instanceof ast.StringLiteral)) {
     return
   }
-  return Utils.joinPath(
-    URI.parse(uri),
-    "..",
-    (i.source as ast.StringLiteral).value,
-  ).toString()
+  return Utils.joinPath(URI.parse(uri), "..", i.source.value).toString()
 }
 
 export const getScope = (node: ast.Node | undefined, initial = false) => {
-  if (
-    !initial &&
-    node?.type === "Block" &&
-    (node as ast.Block).scoped === undefined
-  ) {
+  if (!initial && node instanceof ast.Block && node.scoped === undefined) {
     return
   }
 
@@ -452,9 +428,8 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
       if (specialSymbols[name] !== undefined && parent !== undefined) {
         return {
           type: "Variable",
-          node: parent as ast.Macro | ast.For | ast.Block | ast.Program,
-          identifierNode:
-            parent.type === "Macro" ? (parent as ast.Macro).name : undefined,
+          node: parent,
+          identifierNode: parent instanceof ast.Macro ? parent.name : undefined,
           getType: () => specialSymbols[name],
         } as unknown as Extract<SymbolInfo, { type: K }>
       }
@@ -525,9 +500,8 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
       continue
     }
 
-    if (importStatement.type === "Import" && type === "Variable") {
-      const i = importStatement as ast.Import
-      symbols.set(i.name.value, [
+    if (importStatement instanceof ast.Import && type === "Variable") {
+      symbols.set(importStatement.name.value, [
         {
           type: "Variable",
           node: importedAST,
@@ -550,8 +524,8 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
         } as unknown as Extract<SymbolInfo, { type: K }>,
         importedDocument,
       ])
-    } else if (importStatement.type === "FromImport") {
-      for (const fromImport of (importStatement as ast.FromImport).imports) {
+    } else if (importStatement instanceof ast.FromImport) {
+      for (const fromImport of importStatement.imports) {
         const symbolName = (fromImport.name ?? fromImport.source).value
         const symbolValue = findSymbolInDocument(
           importedSymbols,
@@ -661,9 +635,7 @@ export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
               type: "Variable",
               node: parent as ast.Macro | ast.For | ast.Block | ast.Program,
               identifierNode:
-                parent.type === "Macro"
-                  ? (parent as ast.Macro).name
-                  : undefined,
+                parent instanceof ast.Macro ? parent.name : undefined,
               getType: () => specialSymbols[symbolName],
             } as unknown as Extract<SymbolInfo, { type: K }>,
             document,

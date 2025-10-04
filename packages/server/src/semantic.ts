@@ -224,8 +224,8 @@ export const getTokens = (statements: ast.Statement[]) => {
       case "MemberExpression":
         const memberExpressionStatement = statement as ast.MemberExpression
         statements.push(memberExpressionStatement.object)
-        if (memberExpressionStatement.property.type === "Identifier") {
-          const property = memberExpressionStatement.property as ast.Identifier
+        if (memberExpressionStatement.property instanceof ast.Identifier) {
+          const property = memberExpressionStatement.property
           items.push({
             start: property.token.start,
             end: property.token.end,
@@ -239,8 +239,8 @@ export const getTokens = (statements: ast.Statement[]) => {
       case "CallExpression":
         const callExpressionStatement = statement as ast.CallExpression
         statements.push(...callExpressionStatement.args)
-        if (callExpressionStatement.callee.type === "Identifier") {
-          const callee = callExpressionStatement.callee as ast.Identifier
+        if (callExpressionStatement.callee instanceof ast.Identifier) {
+          const callee = callExpressionStatement.callee
           items.push({
             start: callee.token.start,
             end: callee.token.end,
@@ -248,12 +248,10 @@ export const getTokens = (statements: ast.Statement[]) => {
             tokenModifiers: 0,
           })
         } else if (
-          callExpressionStatement.callee.type === "MemberExpression" &&
-          (callExpressionStatement.callee as ast.MemberExpression).property
-            .type === "Identifier"
+          callExpressionStatement.callee instanceof ast.MemberExpression &&
+          callExpressionStatement.callee.property instanceof ast.Identifier
         ) {
-          const callee = callExpressionStatement.callee as ast.MemberExpression
-          const property = callee.property as ast.Identifier
+          const property = callExpressionStatement.callee.property
           items.push({
             start: property.token.start,
             end: property.token.end,
@@ -350,8 +348,8 @@ export const getTokens = (statements: ast.Statement[]) => {
           tokenType: 7,
           tokenModifiers: 0,
         })
-        if (filterExpressionStatement.filter.type === "Identifier") {
-          const filter = filterExpressionStatement.filter as ast.Identifier
+        if (filterExpressionStatement.filter instanceof ast.Identifier) {
+          const filter = filterExpressionStatement.filter
           items.push({
             start: filter.token.start,
             end: filter.token.end,
@@ -365,8 +363,8 @@ export const getTokens = (statements: ast.Statement[]) => {
       case "FilterStatement":
         const filterStatement = statement as ast.FilterStatement
         statements.push(...filterStatement.body)
-        if (filterStatement.filter.type === "Identifier") {
-          const filter = filterStatement.filter as ast.Identifier
+        if (filterStatement.filter instanceof ast.Identifier) {
+          const filter = filterStatement.filter
           items.push({
             start: filter.token.start,
             end: filter.token.end,

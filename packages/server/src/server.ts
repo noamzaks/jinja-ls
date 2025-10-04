@@ -115,34 +115,34 @@ const getDocumentAST = (contents: string) => {
 }
 
 connection.languages.diagnostics.on(async (params) => {
-  const ast = documentASTs.get(params.textDocument.uri)
+  const { parserErrors, lexerErrors } = documentASTs.get(
+    params.textDocument.uri,
+  )
 
   const items: lsp.Diagnostic[] = []
   const document = documents.get(params.textDocument.uri)
   if (document !== undefined) {
-    for (const e of ast?.parserErrors ?? []) {
-      if (e.type === "MissingNode") {
-        const missingNode = e as ast.MissingNode
-        const position = document.positionAt(missingNode.before.start)
+    for (const e of parserErrors ?? []) {
+      if (e instanceof ast.MissingNode) {
+        const position = document.positionAt(e.before.start)
         items.push({
-          message: `Expected ${missingNode.missingType}`,
+          message: `Expected ${e.missingType}`,
           range: lsp.Range.create(position, position),
           severity: lsp.DiagnosticSeverity.Error,
         })
-      } else if (e.type === "UnexpectedToken") {
-        const unexpectedToken = e as ast.UnexpectedToken
+      } else if (e instanceof ast.UnexpectedToken) {
         items.push({
-          message: unexpectedToken.message,
+          message: e.message,
           range: lsp.Range.create(
-            document.positionAt(unexpectedToken.token.start),
-            document.positionAt(unexpectedToken.token.end),
+            document.positionAt(e.token.start),
+            document.positionAt(e.token.end),
           ),
           severity: lsp.DiagnosticSeverity.Error,
         })
       }
     }
 
-    for (const e of ast?.lexerErrors ?? []) {
+    for (const e of lexerErrors ?? []) {
       items.push({
         message: e.message,
         range: lsp.Range.create(
@@ -197,11 +197,11 @@ connection.onHover(async (params) => {
     // Builtin Filter
     if (
       filters[token.value] &&
-      token.parent?.type === "Identifier" &&
-      ((token.parent?.parent?.type === "CallExpression" &&
-        token.parent?.parent?.parent?.type === "FilterExpression") ||
-        token.parent?.parent?.type === "FilterExpression" ||
-        token.parent?.parent?.type === "FilterStatement")
+      token.parent instanceof ast.Identifier &&
+      ((token.parent.parent instanceof ast.CallExpression &&
+        token.parent.parent.parent instanceof ast.FilterExpression) ||
+        token.parent.parent instanceof ast.FilterExpression ||
+        token.parent.parent instanceof ast.FilterStatement)
     ) {
       return {
         contents: [
@@ -219,9 +219,9 @@ connection.onHover(async (params) => {
     // Builtin Test
     if (
       tests[token.value] &&
-      token.parent?.type === "Identifier" &&
-      token.parent.parent?.type === "TestExpression" &&
-      (token.parent.parent as ast.TestExpression).test === token.parent
+      token.parent instanceof ast.Identifier &&
+      token.parent.parent instanceof ast.TestExpression &&
+      token.parent.parent.test === token.parent
     ) {
       return {
         contents: [
@@ -242,12 +242,11 @@ connection.onHover(async (params) => {
 
     // Function
     if (
-      token.parent?.type === "Identifier" &&
+      token.parent instanceof ast.Identifier &&
       callExpression !== undefined &&
       (callExpression.callee === token.parent ||
-        (callExpression.callee.type === "MemberExpression" &&
-          (callExpression.callee as ast.MemberExpression).property ===
-            token.parent))
+        (callExpression.callee instanceof ast.MemberExpression &&
+          callExpression.callee.property === token.parent))
     ) {
       // Expression with known function type
       const callee = (callExpression as ast.CallExpression).callee
@@ -298,11 +297,11 @@ connection.onHover(async (params) => {
 
     // Block
     if (
-      token.parent?.type === "Identifier" &&
-      token.parent.parent?.type === "Block" &&
-      (token.parent.parent as ast.Block).name === token.parent
+      token.parent instanceof ast.Identifier &&
+      token.parent.parent instanceof ast.Block &&
+      token.parent.parent.name === token.parent
     ) {
-      const block = token.parent.parent as ast.Block
+      const block = token.parent.parent
       const [blockSymbol, blockDocument] = findSymbol(
         document,
         block,
@@ -335,12 +334,12 @@ connection.onHover(async (params) => {
       }
     }
 
-    if (token.parent?.type === "Identifier") {
-      const identifier = token.parent as ast.Identifier
+    if (token.parent instanceof ast.Identifier) {
+      const identifier = token.parent
       const node =
-        identifier.parent?.type === "MemberExpression" &&
-        (identifier.parent as ast.MemberExpression).property === identifier
-          ? (identifier.parent as ast.MemberExpression)
+        identifier.parent instanceof ast.MemberExpression &&
+        identifier.parent.property === identifier
+          ? identifier.parent
           : identifier
       const nodeType = getType(node, document)
       const resolvedType = resolveType(nodeType)
@@ -385,9 +384,9 @@ connection.onDefinition(async (params) => {
 
     if (
       callExpression !== undefined &&
-      callExpression.callee.type === "Identifier"
+      callExpression.callee instanceof ast.Identifier
     ) {
-      const name = (callExpression.callee as ast.Identifier).value
+      const name = callExpression.callee.value
       const [symbol, symbolDocument] = findSymbol(
         document,
         callExpression,
@@ -414,7 +413,7 @@ connection.onDefinition(async (params) => {
 
     if (
       includeExpression !== undefined &&
-      includeExpression.source.type === "StringLiteral"
+      includeExpression.source instanceof ast.StringLiteral
     ) {
       const importedFilename = (includeExpression.source as ast.StringLiteral)
         .value
@@ -474,8 +473,8 @@ connection.onDefinition(async (params) => {
       }
     }
 
-    if (token.parent?.type === "Identifier") {
-      const identifier = token.parent as ast.Identifier
+    if (token.parent instanceof ast.Identifier) {
+      const identifier = token.parent
       const [symbol, symbolDocument] = findSymbol(
         document,
         identifier,
@@ -519,7 +518,7 @@ connection.onSignatureHelp(async (params) => {
 
     if (callExpression !== undefined) {
       if (
-        callExpression.callee.type === "Identifier" &&
+        callExpression.callee instanceof ast.Identifier &&
         callExpression.closeParenToken !== undefined
       ) {
         const callee = callExpression.callee
@@ -624,8 +623,8 @@ connection.onCompletion(async (params) => {
     }
 
     if (
-      token.parent?.parent?.type === "TestExpression" &&
-      (token.parent.parent as ast.TestExpression).test === token.parent
+      token.parent?.parent instanceof ast.TestExpression &&
+      token.parent.parent.test === token.parent
     ) {
       return Object.entries(tests).map(
         ([testName, test]) =>
@@ -638,10 +637,9 @@ connection.onCompletion(async (params) => {
     }
 
     if (
-      token.parent?.type === "Identifier" &&
-      token.parent?.parent?.type === "FilterExpression" &&
-      (token.parent.parent as ast.FilterExpression).filter.identifierName ===
-        (token.parent as ast.Identifier).value
+      token.parent instanceof ast.Identifier &&
+      token.parent.parent instanceof ast.FilterExpression &&
+      token.parent.parent.filter.identifierName === token.parent.value
     ) {
       return Object.entries(filters).map(
         ([filterName, filter]) =>
@@ -653,8 +651,8 @@ connection.onCompletion(async (params) => {
       )
     }
 
-    if (token.parent?.type === "MemberExpression") {
-      const object = (token.parent as ast.MemberExpression).object
+    if (token.parent instanceof ast.MemberExpression) {
+      const object = token.parent.object
       const symbolType = getType(object, document)
       const resolvedType = resolveType(symbolType)
 

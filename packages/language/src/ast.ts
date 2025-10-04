@@ -350,15 +350,13 @@ export class CallExpression extends Expression {
     public closeParenToken: TokenNode | undefined = undefined,
   ) {
     super()
-    if (this.callee.type === "Identifier") {
-      this.identifierName = (this.callee as Identifier).value
+    if (this.callee instanceof Identifier) {
+      this.identifierName = this.callee.value
     } else if (
-      this.callee.type === "MemberExpression" &&
-      (this.callee as MemberExpression).property.type === "Identifier"
+      this.callee instanceof MemberExpression &&
+      this.callee.property instanceof Identifier
     ) {
-      this.identifierName = (
-        (this.callee as MemberExpression).property as Identifier
-      ).value
+      this.identifierName = this.callee.property.value
     }
     this.addChildren(callee, openParenToken, ...args, closeParenToken)
   }
