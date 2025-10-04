@@ -4,6 +4,7 @@
     <img src="https://img.shields.io/badge/license-MIT-blue.svg">
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg">
     <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/noamzaks/jinja-ls/check.yml">
+    <img alt="Visual Studio Marketplace Version" src="https://img.shields.io/visual-studio-marketplace/v/noamzaks.jinja-ls">
     <br />
 </h1>
 
