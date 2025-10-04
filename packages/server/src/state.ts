@@ -7,6 +7,7 @@ export const documentASTs = new Map<
   string,
   {
     program?: ast.Program
+    tokens?: ast.TokenNode[]
     lexerErrors?: LexerError[]
     parserErrors?: ast.ErrorNode[]
   }

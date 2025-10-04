@@ -106,8 +106,8 @@ lspDocuments.onDidChangeContent((event) => {
 const getDocumentAST = (contents: string) => {
   try {
     const [tokens, lexerErrors] = tokenize(contents, {}, true)
-    const [program, parserErrors] = parse(tokens, true)
-    return { program, lexerErrors, parserErrors }
+    const [program, tokenNodes, parserErrors] = parse(tokens, true)
+    return { program, lexerErrors, parserErrors, tokens: tokenNodes }
   } catch (e) {
     console.log(e)
   }
@@ -185,11 +185,11 @@ connection.languages.semanticTokens.on(async (params) => {
 
 connection.onHover(async (params) => {
   const document = documents.get(params.textDocument.uri)
-  const program = documentASTs.get(params.textDocument.uri)?.program
+  const tokens = documentASTs.get(params.textDocument.uri)?.tokens
 
-  if (program !== undefined && document !== undefined) {
+  if (tokens !== undefined && document !== undefined) {
     const offset = document.offsetAt(params.position)
-    const token = tokenAt(program, offset)
+    const token = tokenAt(tokens, offset)
     if (!token) {
       return
     }
@@ -368,12 +368,12 @@ connection.onHover(async (params) => {
 
 connection.onDefinition(async (params) => {
   const document = documents.get(params.textDocument.uri)
-  const program = documentASTs.get(params.textDocument.uri)?.program
+  const tokens = documentASTs.get(params.textDocument.uri)?.tokens
   const imports = documentImports.get(params.textDocument.uri)
 
-  if (program !== undefined && document !== undefined) {
+  if (tokens !== undefined && document !== undefined) {
     const offset = document.offsetAt(params.position)
-    const token = tokenAt(program, offset)
+    const token = tokenAt(tokens, offset)
     if (!token) {
       return
     }
@@ -503,11 +503,11 @@ connection.onDefinition(async (params) => {
 
 connection.onSignatureHelp(async (params) => {
   const document = documents.get(params.textDocument.uri)
-  const program = documentASTs.get(params.textDocument.uri)?.program
+  const tokens = documentASTs.get(params.textDocument.uri)?.tokens
 
-  if (program !== undefined && document !== undefined) {
+  if (tokens !== undefined && document !== undefined) {
     const offset = document.offsetAt(params.position)
-    const token = tokenAt(program, offset - 1)
+    const token = tokenAt(tokens, offset - 1)
     if (!token) {
       return
     }
@@ -613,11 +613,11 @@ connection.onSignatureHelp(async (params) => {
 
 connection.onCompletion(async (params) => {
   const document = documents.get(params.textDocument.uri)
-  const program = documentASTs.get(params.textDocument.uri)?.program
+  const tokens = documentASTs.get(params.textDocument.uri)?.tokens
 
-  if (program !== undefined && document !== undefined) {
+  if (tokens !== undefined && document !== undefined) {
     const offset = document.offsetAt(params.position)
-    const token = tokenAt(program, offset)
+    const token = tokenAt(tokens, offset)
     if (!token) {
       return
     }

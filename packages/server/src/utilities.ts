@@ -15,22 +15,20 @@ export const walk = (
   }
 }
 
-export const tokenAt = (program: ast.Program, offset: number) => {
-  let token: ast.TokenNode | undefined
-  walk(program, (statement) => {
-    if (statement instanceof ast.TokenNode) {
-      if (statement.start <= offset && offset <= statement.end) {
-        token = statement
-        return true
-      } else if (
-        statement.start <= offset &&
-        (token === undefined || statement.end > token.end)
-      ) {
-        token = statement
-      }
+export const tokenAt = (tokens: ast.TokenNode[], offset: number) => {
+  let low = 0
+  let high = tokens.length - 1
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2)
+    if (tokens[middle].start <= offset && offset <= tokens[middle].end) {
+      return tokens[middle]
+    } else if (tokens[middle].start <= offset) {
+      low = middle + 1
+    } else {
+      high = middle - 1
     }
-  })
-  return token
+  }
+  return tokens[low]
 }
 
 export const parentOfType = (node: ast.Node | undefined, type: string) => {

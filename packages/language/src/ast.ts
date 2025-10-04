@@ -73,13 +73,6 @@ export class TokenNode extends Node {
   }
 }
 
-export const createTokenNode = (token: Token | undefined) => {
-  if (token === undefined) {
-    return undefined
-  }
-  return new TokenNode(token)
-}
-
 /**
  * Statements do not result in a value at runtime. They contain one or more expressions internally.
  */
