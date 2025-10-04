@@ -407,12 +407,16 @@ export const getTokens = (statements: ast.Statement[]) => {
             tokenModifiers: 0,
           })
         }
-        items.push({
-          start: testExpressionStatement.test.token.start,
-          end: testExpressionStatement.test.token.end,
-          tokenType: 0,
-          tokenModifiers: 4,
-        })
+        if (testExpressionStatement.test instanceof ast.Identifier) {
+          items.push({
+            start: testExpressionStatement.test.token.start,
+            end: testExpressionStatement.test.token.end,
+            tokenType: 0,
+            tokenModifiers: 4,
+          })
+        } else {
+          statements.push(testExpressionStatement.test)
+        }
         break
       case "UnaryExpression":
         const unaryExpressionStatement = statement as ast.UnaryExpression

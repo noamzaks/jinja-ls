@@ -52,7 +52,7 @@ connection.onInitialize((params) => {
         triggerCharacters: ["(", ",", "="],
       },
       completionProvider: {
-        triggerCharacters: ["."],
+        triggerCharacters: [".", " "],
       },
     },
   } satisfies lsp.InitializeResult
@@ -220,8 +220,11 @@ connection.onHover(async (params) => {
     if (
       tests[token.value] &&
       token.parent instanceof ast.Identifier &&
-      token.parent.parent instanceof ast.TestExpression &&
-      token.parent.parent.test === token.parent
+      ((token.parent.parent instanceof ast.TestExpression &&
+        token.parent.parent.test === token.parent) ||
+        (token.parent.parent instanceof ast.CallExpression &&
+          token.parent.parent.parent instanceof ast.TestExpression &&
+          token.parent.parent.callee === token.parent))
     ) {
       return {
         contents: [
@@ -615,6 +618,15 @@ connection.onCompletion(async (params) => {
   const document = documents.get(params.textDocument.uri)
   const tokens = documentASTs.get(params.textDocument.uri)?.tokens
 
+  if (params.context?.triggerCharacter === " ") {
+    const text = document
+      .getText(lsp.Range.create(lsp.Position.create(0, 0), params.position))
+      .trimEnd()
+    if (!(text.endsWith("{{") || text.endsWith("|") || text.endsWith("is"))) {
+      return
+    }
+  }
+
   if (tokens !== undefined && document !== undefined) {
     const offset = document.offsetAt(params.position)
     const token = tokenAt(tokens, offset)
@@ -623,23 +635,33 @@ connection.onCompletion(async (params) => {
     }
 
     if (
-      token.parent?.parent instanceof ast.TestExpression &&
-      token.parent.parent.test === token.parent
+      (token.parent?.parent instanceof ast.TestExpression &&
+        token.parent.parent.test === token.parent) ||
+      (token.value === "is" &&
+        token.parent instanceof ast.TestExpression &&
+        token.parent.test instanceof ast.Identifier &&
+        token.parent.test.value === "error")
     ) {
-      return Object.entries(tests).map(
-        ([testName, test]) =>
-          ({
-            label: testName,
-            kind: lsp.CompletionItemKind.Function,
-            documentation: test.brief,
-          }) satisfies lsp.CompletionItem,
-      )
+      return Object.entries(tests)
+        .filter(([testName]) => /\w/.test(testName))
+        .map(
+          ([testName, test]) =>
+            ({
+              label: testName,
+              kind: lsp.CompletionItemKind.Function,
+              documentation: test.brief,
+            }) satisfies lsp.CompletionItem,
+        )
     }
 
     if (
-      token.parent instanceof ast.Identifier &&
-      token.parent.parent instanceof ast.FilterExpression &&
-      token.parent.parent.filter.identifierName === token.parent.value
+      (token.parent instanceof ast.Identifier &&
+        token.parent.parent instanceof ast.FilterExpression &&
+        token.parent.parent.filter.identifierName === token.parent.value) ||
+      (token.value === "|" &&
+        token.parent instanceof ast.FilterExpression &&
+        token.parent.filter instanceof ast.Identifier &&
+        token.parent.filter.value === "error")
     ) {
       return Object.entries(filters).map(
         ([filterName, filter]) =>

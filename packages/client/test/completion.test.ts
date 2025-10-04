@@ -8,6 +8,27 @@ suite("Should provide completions", () => {
 
   test("Returns completions for errors.jinja", async () => {
     expect(
+      await getCompletions(errorsUri, new vscode.Position(17, 6), "u"),
+    ).toMatchObject([
+      {
+        label: "unique",
+        kind: "Function",
+      },
+      {
+        label: "upper",
+        kind: "Function",
+      },
+      {
+        label: "urlencode",
+        kind: "Function",
+      },
+      {
+        label: "urlize",
+        kind: "Function",
+      },
+    ])
+
+    expect(
       await getCompletions(errorsUri, new vscode.Position(20, 8), "u"),
     ).toMatchObject([
       {
@@ -30,6 +51,15 @@ suite("Should provide completions", () => {
 
     expect(
       await getCompletions(errorsUri, new vscode.Position(21, 9), "o"),
+    ).toMatchObject([
+      {
+        label: "odd",
+        kind: "Function",
+      },
+    ])
+
+    expect(
+      await getCompletions(errorsUri, new vscode.Position(18, 7), "o"),
     ).toMatchObject([
       {
         label: "odd",

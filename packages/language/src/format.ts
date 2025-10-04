@@ -1,4 +1,4 @@
-import type {
+import {
   ArrayLiteral,
   BinaryExpression,
   CallExpression,
@@ -337,6 +337,9 @@ export function formatExpression(
     }
     case "TestExpression": {
       const n = node as TestExpression
+      if (!(n.test instanceof Identifier)) {
+        throw new Error("Unsupported in format")
+      }
       return `${formatExpression(n.operand)} is${n.negate ? " not" : ""} ${
         n.test.value
       }`

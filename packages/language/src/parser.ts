@@ -1116,11 +1116,14 @@ export function parse(
         createMissingNode("identifier for the test", tokens[filterStart], test)
         test = new Identifier("error", createTokenNode(tokens[current]))
       }
-      // TODO: Add support for non-identifier tests
+      if (is(TOKEN_TYPES.OpenParen)) {
+        test = parseCallExpression(test)
+      }
+
       operand = new TestExpression(
         operand,
         negate,
-        test as Identifier,
+        test as Identifier | CallExpression,
         createTokenNode(isToken),
         createTokenNode(notToken),
       )

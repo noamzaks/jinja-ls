@@ -1,4 +1,4 @@
-import type {
+import {
   ArrayLiteral,
   BinaryExpression,
   CallExpression,
@@ -1167,6 +1167,9 @@ export class Interpreter {
     // TODO: Add support for non-identifier tests. e.g., divisibleby(number)
     const operand = this.evaluate(node.operand, environment)
 
+    if (node.test instanceof CallExpression) {
+      throw new Error("Unsupported in runtime")
+    }
     const test = environment.tests.get(node.test.value)
     if (!test) {
       throw new Error(`Unknown test: ${node.test.value}`)

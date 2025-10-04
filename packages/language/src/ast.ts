@@ -544,7 +544,7 @@ export class TestExpression extends Expression {
   constructor(
     public operand: Expression,
     public negate: boolean,
-    public test: Identifier, // TODO: Add support for non-identifier tests
+    public test: Identifier | CallExpression,
     public isToken: TokenNode,
     public notToken: TokenNode | undefined = undefined,
   ) {
