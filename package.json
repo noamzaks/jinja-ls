@@ -9,6 +9,9 @@
     "test-e2e": "npm run compile && node dist/tests/run.js",
     "test-language": "vitest run --root packages/language"
   },
+  "extensionDependencies": [
+    "samuelcolvin.jinjahtml"
+  ],
   "displayName": "Jinja Language Server",
   "description": "Feature-rich language server for Jinja.",
   "version": "0.0.2",
@@ -32,47 +35,34 @@
   "categories": [
     "Programming Languages"
   ],
-  "contributes": {
-    "languages": [
-      {
-        "id": "jinja",
-        "aliases": [
-          "Jinja"
-        ],
-        "extensions": [
-          ".jinja",
-          ".jinja2",
-          ".j2"
-        ],
-        "configuration": "./language-configuration.json"
-      },
-      {
-        "id": "jinja-md",
-        "aliases": [
-          "Jinja Markdown",
-          "jinja-md"
-        ],
-        "extensions": [
-          ".md.jinja",
-          ".md.jinja2",
-          ".md.j2"
-        ],
-        "configuration": "./language-configuration.json"
-      }
-    ],
-    "grammars": [
-      {
-        "language": "jinja",
-        "scopeName": "source.jinja",
-        "path": "./syntaxes/jinja.tmLanguage.json"
-      },
-      {
-        "language": "jinja-md",
-        "scopeName": "text.html.markdown.jinja",
-        "path": "./syntaxes/jinja-md.tmLanguage.json"
-      }
-    ]
-  },
+  "activationEvents": [
+    "onLanguage:jinja",
+    "onLanguage:jinja-html",
+    "onLanguage:jinja-xml",
+    "onLanguage:jinja-css",
+    "onLanguage:jinja-json",
+    "onLanguage:jinja-md",
+    "onLanguage:jinja-yaml",
+    "onLanguage:jinja-toml",
+    "onLanguage:jinja-lua",
+    "onLanguage:jinja-properties",
+    "onLanguage:jinja-shell",
+    "onLanguage:jinja-dockerfile",
+    "onLanguage:jinja-sql",
+    "onLanguage:jinja-py",
+    "onLanguage:jinja-cy",
+    "onLanguage:jinja-terraform",
+    "onLanguage:jinja-nginx",
+    "onLanguage:jinja-groovy",
+    "onLanguage:jinja-systemd",
+    "onLanguage:jinja-cpp",
+    "onLanguage:jinja-java",
+    "onLanguage:jinja-js",
+    "onLanguage:jinja-ts",
+    "onLanguage:jinja-php",
+    "onLanguage:jinja-cisco",
+    "onLanguage:jinja-rust"
+  ],
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.6",
     "@rollup/plugin-json": "^6.1.0",
