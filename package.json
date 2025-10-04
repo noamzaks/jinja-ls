@@ -1,11 +1,23 @@
 {
   "name": "jinja-ls",
+  "private": "true",
+  "main": "./dist/extension",
+  "scripts": {
+    "compile": "rollup -c",
+    "watch": "rollup -c -w",
+    "package": "npm run compile && vsce package --no-dependencies",
+    "test-e2e": "npm run compile && node dist/tests/run.js",
+    "test-language": "vitest run --root packages/language"
+  },
   "displayName": "Jinja Language Server",
   "description": "Feature-rich language server for Jinja.",
   "version": "0.0.1",
   "author": "Noam Zaks <noam@noamzaks.com> (https://noamzaks.com/)",
   "icon": "images/icon-1024.png",
   "license": "MIT",
+  "sponsor": {
+    "url": "https://github.com/sponsors/noamzaks"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/noamzaks/jinja-ls"
@@ -17,6 +29,9 @@
   "engines": {
     "vscode": "^1.100.0"
   },
+  "categories": [
+    "Programming Languages"
+  ],
   "contributes": {
     "languages": [
       {
@@ -57,15 +72,6 @@
         "path": "./syntaxes/jinja-md.tmLanguage.json"
       }
     ]
-  },
-  "private": "true",
-  "main": "./dist/extension",
-  "scripts": {
-    "compile": "rollup -c",
-    "watch": "rollup -c -w",
-    "package": "npm run compile && vsce package --no-dependencies",
-    "test-e2e": "npm run compile && node dist/tests/run.js",
-    "test-language": "vitest run --root packages/language"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.6",
