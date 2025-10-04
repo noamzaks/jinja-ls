@@ -704,6 +704,10 @@ export function parse(
       body.push(parseAny())
     }
 
+    for (const arg of args) {
+      // Make sure the scope of the arguments is not inside the scope of the body
+      arg.definesScope = true
+    }
     const result = new Macro(
       name as Identifier,
       args,
