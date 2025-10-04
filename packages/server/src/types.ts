@@ -1,7 +1,7 @@
-import { ast, formatExpression, LexerError } from "@jinja-ls/language"
+import { ast, formatExpression } from "@jinja-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { BUILTIN_TYPES } from "./builtinTypes"
-import { findSymbol, SymbolInfo } from "./symbols"
+import { findSymbol } from "./symbols"
 
 export interface ArgumentInfo {
   name: string
@@ -49,20 +49,6 @@ export const resolveType = (
 export const getType = (
   expression: ast.Expression | undefined | null,
   document: TextDocument,
-  documents: Map<string, TextDocument>,
-  documentASTs: Map<
-    string,
-    {
-      program?: ast.Program
-      lexerErrors?: LexerError[]
-      parserErrors?: ast.ErrorNode[]
-    }
-  >,
-  documentSymbols: Map<string, Map<string, SymbolInfo[]>>,
-  documentImports: Map<
-    string,
-    (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
-  >,
 ): TypeInfo | TypeReference | undefined => {
   if (!expression) {
     return
@@ -84,14 +70,7 @@ export const getType = (
       properties: Object.fromEntries(
         arrayOrTuple.value.map((expression, index) => [
           index.toString(),
-          getType(
-            expression,
-            document,
-            documents,
-            documentASTs,
-            documentSymbols,
-            documentImports,
-          ),
+          getType(expression, document),
         ]),
       ),
       literalValue: formatExpression(expression),
@@ -104,14 +83,7 @@ export const getType = (
     > = {}
     for (const [key, value] of objectLiteral.value.entries()) {
       if (key.type === "StringLiteral") {
-        properties[(key as ast.StringLiteral).value] = getType(
-          value,
-          document,
-          documents,
-          documentASTs,
-          documentSymbols,
-          documentImports,
-        )
+        properties[(key as ast.StringLiteral).value] = getType(value, document)
       }
     }
     return {
@@ -126,16 +98,7 @@ export const getType = (
       memberExpression.property.type === "Identifier" ||
       memberExpression.property.type === "IntegerLiteral"
     ) {
-      const objectType = resolveType(
-        getType(
-          memberExpression.object,
-          document,
-          documents,
-          documentASTs,
-          documentSymbols,
-          documentImports,
-        ),
-      )
+      const objectType = resolveType(getType(memberExpression.object, document))
       let propertyName = (
         memberExpression.property as
           | ast.StringLiteral
@@ -156,16 +119,7 @@ export const getType = (
     }
   } else if (expression.type === "CallExpression") {
     const callExpression = expression as ast.CallExpression
-    const calleeType = resolveType(
-      getType(
-        callExpression.callee,
-        document,
-        documents,
-        documentASTs,
-        documentSymbols,
-        documentImports,
-      ),
-    )
+    const calleeType = resolveType(getType(callExpression.callee, document))
     if (calleeType?.signature !== undefined) {
       return resolveType(calleeType.signature.return)
     }
@@ -175,19 +129,9 @@ export const getType = (
       expression,
       (expression as ast.Identifier).value,
       "Variable",
-      documents,
-      documentASTs,
-      documentSymbols,
-      documentImports,
     )
     if (symbol !== undefined && symbolDocument !== undefined) {
-      return symbol.getType(
-        symbolDocument,
-        documents,
-        documentASTs,
-        documentSymbols,
-        documentImports,
-      )
+      return symbol.getType(symbolDocument)
     }
   }
 }

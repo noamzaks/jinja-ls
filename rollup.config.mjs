@@ -11,6 +11,13 @@ const plugins = [
   json(),
 ]
 
+const silenceCircularDependency = (level, log, handler) => {
+  if (log.code === "CIRCULAR_DEPENDENCY") {
+    return
+  }
+  handler(level, log)
+}
+
 export default [
   {
     input: "packages/server/src/server.ts",
@@ -22,6 +29,7 @@ export default [
       },
     ],
     plugins,
+    onLog: silenceCircularDependency,
   },
   {
     input: "packages/client/src/extension.ts",
@@ -33,13 +41,24 @@ export default [
       },
     ],
     plugins,
+    external: ["vscode"],
+    onLog: silenceCircularDependency,
   },
   {
     input: globSync("packages/client/test/*.ts"),
     output: {
       format: "cjs",
       dir: "dist/tests",
+      sourcemap: true,
     },
     plugins: [typescript({ tsconfig: "./packages/client/test/tsconfig.json" })],
+    external: [
+      "expect",
+      "vscode",
+      "path",
+      "@vscode/test-electron",
+      "glob",
+      "mocha",
+    ],
   },
 ]

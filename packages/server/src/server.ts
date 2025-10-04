@@ -1,10 +1,16 @@
-import { ast, LexerError, parse, tokenize } from "@jinja-ls/language"
+import { ast, parse, tokenize } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { createConnection } from "vscode-languageserver/node"
 import { URI, Utils } from "vscode-uri"
 import { filters, tests } from "./generated"
 import { getTokens, legend } from "./semantic"
+import {
+  documentASTs,
+  documentImports,
+  documents,
+  documentSymbols,
+} from "./state"
 import {
   collectSymbols,
   findSymbol,
@@ -23,20 +29,6 @@ const ReadFileRequest = new lsp.RequestType<
 
 const connection = createConnection(lsp.ProposedFeatures.all)
 const lspDocuments = new lsp.TextDocuments(TextDocument)
-const documents = new Map<string, TextDocument>()
-const documentASTs = new Map<
-  string,
-  {
-    program?: ast.Program
-    lexerErrors?: LexerError[]
-    parserErrors?: ast.ErrorNode[]
-  }
->()
-const documentImports = new Map<
-  string,
-  (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
->()
-const documentSymbols = new Map<string, Map<string, SymbolInfo[]>>()
 
 connection.onInitialize((params) => {
   return {
@@ -259,16 +251,7 @@ connection.onHover(async (params) => {
     ) {
       // Expression with known function type
       const callee = (callExpression as ast.CallExpression).callee
-      const resolvedType = resolveType(
-        getType(
-          callee,
-          document,
-          documents,
-          documentASTs,
-          documentSymbols,
-          documentImports,
-        ),
-      )
+      const resolvedType = resolveType(getType(callee, document))
       if (resolvedType?.signature !== undefined) {
         const contents: lsp.MarkedString[] = [
           {
@@ -290,10 +273,6 @@ connection.onHover(async (params) => {
         token,
         token.value,
         "Macro",
-        documents,
-        documentASTs,
-        documentSymbols,
-        documentImports,
       )
       if (
         symbol !== undefined &&
@@ -329,10 +308,6 @@ connection.onHover(async (params) => {
         block,
         block.name.value,
         "Block",
-        documents,
-        documentASTs,
-        documentSymbols,
-        documentImports,
         { checkCurrent: false, importTypes: ["Extends"] },
       )
       const sourceBlock = blockSymbol?.node as ast.Block | undefined
@@ -367,14 +342,7 @@ connection.onHover(async (params) => {
         (identifier.parent as ast.MemberExpression).property === identifier
           ? (identifier.parent as ast.MemberExpression)
           : identifier
-      const nodeType = getType(
-        node,
-        document,
-        documents,
-        documentASTs,
-        documentSymbols,
-        documentImports,
-      )
+      const nodeType = getType(node, document)
       const resolvedType = resolveType(nodeType)
 
       if (nodeType !== undefined && resolvedType !== undefined) {
@@ -425,10 +393,6 @@ connection.onDefinition(async (params) => {
         callExpression,
         name,
         "Macro",
-        documents,
-        documentASTs,
-        documentSymbols,
-        documentImports,
       )
 
       if (symbol !== undefined && symbolDocument !== undefined) {
@@ -494,10 +458,6 @@ connection.onDefinition(async (params) => {
         blockStatement,
         blockStatement.name.value,
         "Block",
-        documents,
-        documentASTs,
-        documentSymbols,
-        documentImports,
         { checkCurrent: false, importTypes: ["Extends"] },
       )
 
@@ -521,10 +481,6 @@ connection.onDefinition(async (params) => {
         identifier,
         identifier.value,
         "Variable",
-        documents,
-        documentASTs,
-        documentSymbols,
-        documentImports,
       )
 
       if (
@@ -567,14 +523,7 @@ connection.onSignatureHelp(async (params) => {
         callExpression.closeParenToken !== undefined
       ) {
         const callee = callExpression.callee
-        const symbolType = getType(
-          callee,
-          document,
-          documents,
-          documentASTs,
-          documentSymbols,
-          documentImports,
-        )
+        const symbolType = getType(callee, document)
         const resolvedType = resolveType(symbolType)
         const calleeEnd = callee.getEnd()
 
@@ -643,16 +592,7 @@ connection.onSignatureHelp(async (params) => {
         }
       }
 
-      const symbolType = resolveType(
-        getType(
-          callExpression.callee,
-          document,
-          documents,
-          documentASTs,
-          documentSymbols,
-          documentImports,
-        ),
-      )
+      const symbolType = resolveType(getType(callExpression.callee, document))
       if (symbolType?.signature !== undefined) {
         return {
           signatures: [
@@ -715,14 +655,7 @@ connection.onCompletion(async (params) => {
 
     if (token.parent?.type === "MemberExpression") {
       const object = (token.parent as ast.MemberExpression).object
-      const symbolType = getType(
-        object,
-        document,
-        documents,
-        documentASTs,
-        documentSymbols,
-        documentImports,
-      )
+      const symbolType = getType(object, document)
       const resolvedType = resolveType(symbolType)
 
       if (resolvedType !== undefined) {
@@ -760,24 +693,10 @@ connection.onCompletion(async (params) => {
         return completions
       }
     } else if (token.parent !== undefined) {
-      const symbols = findSymbolsInScope(
-        token.parent,
-        "Variable",
-        document,
-        documents,
-        documentASTs,
-        documentSymbols,
-        documentImports,
-      )
+      const symbols = findSymbolsInScope(token.parent, "Variable", document)
       const completions: lsp.CompletionItem[] = []
       for (const [symbolName, [symbol, document]] of symbols.entries()) {
-        const type = symbol?.getType(
-          document,
-          documents,
-          documentASTs,
-          documentSymbols,
-          documentImports,
-        )
+        const type = symbol?.getType(document)
         const resolvedType = resolveType(type)
         let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Variable
         if (type !== undefined && resolvedType !== undefined) {

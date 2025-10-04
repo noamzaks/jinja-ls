@@ -1,6 +1,12 @@
-import { ast, formatExpression, LexerError } from "@jinja-ls/language"
+import { ast, formatExpression } from "@jinja-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { URI, Utils } from "vscode-uri"
+import {
+  documentASTs,
+  documentImports,
+  documents,
+  documentSymbols,
+} from "./state"
 import { ArgumentInfo, getType, TypeInfo, TypeReference } from "./types"
 import { parentOfType } from "./utilities"
 
@@ -17,23 +23,7 @@ export type SymbolInfo =
       type: "Variable"
       node: ast.Node
       identifierNode?: ast.Identifier
-      getType: (
-        document: TextDocument,
-        documents: Map<string, TextDocument>,
-        documentASTs: Map<
-          string,
-          {
-            program?: ast.Program
-            lexerErrors?: LexerError[]
-            parserErrors?: ast.ErrorNode[]
-          }
-        >,
-        documentSymbols: Map<string, Map<string, SymbolInfo[]>>,
-        documentImports: Map<
-          string,
-          (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
-        >,
-      ) => TypeInfo | TypeReference | undefined
+      getType: (document: TextDocument) => TypeInfo | TypeReference | undefined
     }
 
 export const argToArgumentInfo = (arg: ast.Expression): ArgumentInfo => {
@@ -114,21 +104,11 @@ export const collectSymbols = (
           argument.type === "Identifier"
             ? (argument as ast.Identifier)
             : (argument as ast.KeywordArgumentExpression).key,
-        getType: (
-          document,
-          documents,
-          documentASTs,
-          documentSymbols,
-          documentImports,
-        ) =>
+        getType: (document) =>
           argument.type === "KeywordArgumentExpression"
             ? getType(
                 (argument as ast.KeywordArgumentExpression).value,
                 document,
-                documents,
-                documentASTs,
-                documentSymbols,
-                documentImports,
               )
             : undefined,
       })
@@ -174,21 +154,7 @@ export const collectSymbols = (
         type: "Variable",
         node: setStatement,
         identifierNode: variableIdentifier,
-        getType: (
-          document,
-          documents,
-          documentASTs,
-          documentSymbols,
-          documentImports,
-        ) =>
-          getType(
-            setStatement.value,
-            document,
-            documents,
-            documentASTs,
-            documentSymbols,
-            documentImports,
-          ),
+        getType: (document) => getType(setStatement.value, document),
       })
     }
   } else if (
@@ -519,20 +485,6 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
   inScopeOf: ast.Node | undefined,
   type: K,
   document: TextDocument,
-  documents: Map<string, TextDocument>,
-  documentASTs: Map<
-    string,
-    {
-      program?: ast.Program
-      lexerErrors?: LexerError[]
-      parserErrors?: ast.ErrorNode[]
-    }
-  >,
-  documentSymbols: Map<string, Map<string, SymbolInfo[]>>,
-  documentImports: Map<
-    string,
-    (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
-  >,
   importTypes?: string[],
 ) => {
   const imports = documentImports.get(document.uri)
@@ -589,13 +541,8 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
                 importedAST,
               )
               if (symbolValue !== undefined) {
-                typeInfo.properties![symbolName] = symbolValue.getType(
-                  importedDocument,
-                  documents,
-                  documentASTs,
-                  documentSymbols,
-                  documentImports,
-                )
+                typeInfo.properties![symbolName] =
+                  symbolValue.getType(importedDocument)
               }
             }
             return typeInfo
@@ -639,20 +586,6 @@ export const findSymbol = <K extends SymbolInfo["type"]>(
   inScopeOf: ast.Node | undefined,
   name: string,
   type: K,
-  documents: Map<string, TextDocument>,
-  documentASTs: Map<
-    string,
-    {
-      program?: ast.Program
-      lexerErrors?: LexerError[]
-      parserErrors?: ast.ErrorNode[]
-    }
-  >,
-  documentSymbols: Map<string, Map<string, SymbolInfo[]>>,
-  documentImports: Map<
-    string,
-    (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
-  >,
   {
     checkCurrent,
     importTypes,
@@ -679,10 +612,6 @@ export const findSymbol = <K extends SymbolInfo["type"]>(
     inScopeOf,
     type,
     document,
-    documents,
-    documentASTs,
-    documentSymbols,
-    documentImports,
     importTypes,
   )
   return importedSymbols.get(name) ?? []
@@ -692,20 +621,6 @@ export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
   node: ast.Node,
   type: K,
   document: TextDocument,
-  documents: Map<string, TextDocument>,
-  documentASTs: Map<
-    string,
-    {
-      program?: ast.Program
-      lexerErrors?: LexerError[]
-      parserErrors?: ast.ErrorNode[]
-    }
-  >,
-  documentSymbols: Map<string, Map<string, SymbolInfo[]>>,
-  documentImports: Map<
-    string,
-    (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
-  >,
 ): Map<string, [Extract<SymbolInfo, { type: K }>, TextDocument]> => {
   const result = new Map<
     string,
@@ -728,15 +643,7 @@ export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
     }
   }
 
-  const importedSymbols = getImportedSymbols(
-    node,
-    type,
-    document,
-    documents,
-    documentASTs,
-    documentSymbols,
-    documentImports,
-  )
+  const importedSymbols = getImportedSymbols(node, type, document)
 
   for (const [key, value] of importedSymbols.entries()) {
     result.set(key, value)
