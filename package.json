@@ -64,6 +64,14 @@
     "onLanguage:jinja-cisco",
     "onLanguage:jinja-rust"
   ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "jinja-ls.restart",
+        "title": "Jinja LS: Restart Server"
+      }
+    ]
+  },
   "devDependencies": {
     "@eslint/js": "^9.37.0",
     "@rollup/plugin-commonjs": "^28.0.6",

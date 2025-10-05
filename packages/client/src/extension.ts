@@ -5,6 +5,12 @@ import * as lsp from "vscode-languageclient/node"
 
 let client: lsp.LanguageClient
 
+const SetGlobalsRequest = new lsp.RequestType<
+  { globals: Record<string, unknown>; merge: boolean },
+  { success: boolean },
+  void
+>("jinja/setGlobals")
+
 export const activate = (context: vscode.ExtensionContext) => {
   const serverModule = context.asAbsolutePath(path.join("dist", "server.js"))
 
@@ -54,8 +60,6 @@ export const activate = (context: vscode.ExtensionContext) => {
     clientOptions,
   )
 
-  client.start()
-
   client.onRequest("jinja/readFile", async ({ uri }: { uri: string }) => {
     try {
       const document = await vscode.workspace.openTextDocument(
@@ -66,6 +70,17 @@ export const activate = (context: vscode.ExtensionContext) => {
       return {}
     }
   })
+
+  client.start()
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("jinja-ls.restart", () => client.restart()),
+    vscode.commands.registerCommand(
+      "jinja-ls.setGlobals",
+      (globals: Record<string, unknown>, merge = true) =>
+        client.sendRequest(SetGlobalsRequest, { globals, merge }),
+    ),
+  )
 }
 
 export const deactivate = async () => {

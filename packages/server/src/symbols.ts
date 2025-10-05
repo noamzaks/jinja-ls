@@ -6,10 +6,12 @@ import {
   documentImports,
   documents,
   documentSymbols,
+  globals,
 } from "./state"
 import {
   ArgumentInfo,
   getType,
+  getTypeInfoFromJS,
   resolveType,
   TypeInfo,
   TypeReference,
@@ -447,8 +449,16 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
           node: parent,
           identifierNode: parent instanceof ast.Macro ? parent.name : undefined,
           getType: () => specialSymbols[name],
-        } as unknown as Extract<SymbolInfo, { type: K }>
+        } as SymbolInfo as Extract<SymbolInfo, { type: K }>
       }
+    }
+
+    if (globals[name] !== undefined && program !== undefined) {
+      return {
+        type: "Variable",
+        node: program,
+        getType: () => getTypeInfoFromJS(globals[name]),
+      } as SymbolInfo as Extract<SymbolInfo, { type: K }>
     }
   }
 
@@ -604,6 +614,13 @@ export const findSymbol = <K extends SymbolInfo["type"]>(
   return importedSymbols.get(name) ?? []
 }
 
+export const getProgramOf = (node: ast.Node) => {
+  while (node.parent !== undefined) {
+    node = node.parent
+  }
+  return node
+}
+
 export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
   node: ast.Node,
   type: K,
@@ -650,11 +667,22 @@ export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
               identifierNode:
                 parent instanceof ast.Macro ? parent.name : undefined,
               getType: () => specialSymbols[symbolName],
-            } as unknown as Extract<SymbolInfo, { type: K }>,
+            } as SymbolInfo as Extract<SymbolInfo, { type: K }>,
             document,
           ])
         }
       }
+    }
+
+    for (const key in globals) {
+      result.set(key, [
+        {
+          type: "Variable",
+          node: getProgramOf(node),
+          getType: () => getTypeInfoFromJS(globals[key]),
+        } as SymbolInfo as Extract<SymbolInfo, { type: K }>,
+        document,
+      ])
     }
   }
 

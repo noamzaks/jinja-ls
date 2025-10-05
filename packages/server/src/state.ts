@@ -17,3 +17,4 @@ export const documentImports = new Map<
   (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
 >()
 export const documentSymbols = new Map<string, Map<string, SymbolInfo[]>>()
+export const globals: Record<string, unknown> = {}

@@ -10,6 +10,7 @@ import {
   documentImports,
   documents,
   documentSymbols,
+  globals,
 } from "./state"
 import {
   collectSymbols,
@@ -20,6 +21,8 @@ import {
 } from "./symbols"
 import { getType, resolveType, stringifySignatureInfo } from "./types"
 import { parentOfType, tokenAt, walk } from "./utilities"
+
+const HOVER_LITERAL_MAX_LENGTH = 20
 
 const ReadFileRequest = new lsp.RequestType<
   { uri: string },
@@ -373,7 +376,7 @@ connection.onHover(async (params) => {
       if (nodeType !== undefined && resolvedType !== undefined) {
         let value = `${identifier.value}: ${resolvedType.name}`
         if (nodeType.literalValue !== undefined) {
-          value += ` = ${nodeType.literalValue}`
+          value += ` = ${nodeType.literalValue.length < HOVER_LITERAL_MAX_LENGTH ? nodeType.literalValue : "..."}`
         }
         const contents: lsp.MarkedString[] = [
           {
@@ -741,6 +744,29 @@ connection.onCompletion(async (params) => {
     }
   }
 })
+
+connection.onRequest(
+  "jinja/setGlobals",
+  async ({
+    globals: globalsToAdd,
+    merge,
+  }: {
+    globals: Record<string, unknown>
+    merge: boolean
+  }) => {
+    if (!merge) {
+      for (const key in globals) {
+        delete globals[key]
+      }
+    }
+
+    for (const key in globalsToAdd) {
+      globals[key] = globalsToAdd[key]
+    }
+
+    return { success: true }
+  },
+)
 
 lspDocuments.listen(connection)
 connection.listen()

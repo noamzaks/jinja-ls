@@ -35,11 +35,11 @@
 - [x] Provide symbols from imports
 - [x] Track types of expressions including globals and special symbols
 - [x] Provide auto-complete for built-in tests and filters and variables
+- [x] Provide an API for other extensions to add globals
 - [ ] Support custom import directories
 - [ ] Provide format document
 - [ ] Provide document symbols
 - [ ] Provide documentation for user-defined symbols
-- [ ] Provide an API for other extensions to add globals
 - [ ] Support embedded code languages in Markdown (hover, signature help, semantic highlighting, diagnostics)
 - [ ] Make lexer/parser more performant (incremental)
 - [ ] Support custom start/end symbols (instead of `{{, {%, {#`)

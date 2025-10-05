@@ -47,6 +47,21 @@ export const resolveType = (
   return type as TypeInfo | undefined
 }
 
+export const getElementType = (types: (TypeInfo | TypeReference)[]) => {
+  let elementType: TypeInfo | undefined = undefined
+  const firstType = resolveType(types[0])
+  if (
+    types.length !== 0 &&
+    types.every((p) => resolveType(p).name === firstType.name)
+  ) {
+    elementType = firstType
+    if (elementType.literalValue) {
+      delete elementType.literalValue
+    }
+    return elementType
+  }
+}
+
 export const getType = (
   expression: ast.Expression | undefined | null,
   document: TextDocument,
@@ -71,23 +86,11 @@ export const getType = (
         getType(expression, document),
       ]),
     )
-    let elementType: TypeInfo | undefined = undefined
-    const values = Object.values(properties)
-    const firstType = resolveType(values[0])
-    if (
-      values.length !== 0 &&
-      values.every((p) => resolveType(p).name === firstType.name)
-    ) {
-      elementType = firstType
-      if (elementType.literalValue) {
-        delete elementType.literalValue
-      }
-    }
     return {
       name: expression.type === "ArrayLiteral" ? "list" : "tuple",
       properties,
       literalValue: formatExpression(expression),
-      elementType,
+      elementType: getElementType(Object.values(properties)),
     }
   } else if (expression instanceof ast.ObjectLiteral) {
     const properties: Record<
@@ -164,4 +167,40 @@ export const stringifySignatureInfo = (s: SignatureInfo) => {
     signature += " -> " + returnName
   }
   return signature
+}
+
+export const getTypeInfoFromJS = (
+  value: unknown,
+): TypeInfo | TypeReference | undefined => {
+  if (typeof value === "string") {
+    return { type: "str", literalValue: JSON.stringify(value) }
+  } else if (typeof value === "number" || typeof value === "bigint") {
+    return {
+      type: Number.isInteger(value) ? "int" : "float",
+      literalValue: value.toString(),
+    }
+  } else if (typeof value === "boolean") {
+    return { type: "bool", literalValue: value ? "true" : "false" }
+  } else if (Array.isArray(value)) {
+    const properties = Object.fromEntries(
+      value.map((item, index) => [index.toString(), getTypeInfoFromJS(item)]),
+    )
+    return {
+      name: "tuple",
+      properties,
+      literalValue: JSON.stringify(value),
+      elementType: getElementType(Object.values(properties)),
+    }
+  } else if (typeof value === "object") {
+    return {
+      name: "dict",
+      literalValue: JSON.stringify(value),
+      properties: Object.fromEntries(
+        Object.entries(value).map(([key, value]) => [
+          key,
+          getTypeInfoFromJS(value),
+        ]),
+      ),
+    }
+  }
 }
