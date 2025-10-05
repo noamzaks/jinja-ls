@@ -18,7 +18,9 @@ suite("Should provide hover", () => {
 
     expect(await getHover(errorsUri, new vscode.Position(23, 6))).toMatchObject(
       {
-        contents: ["```python\nexample: macro\n```"],
+        contents: [
+          '```python\n(variable1 = "something", another = true, xyzw = 1574) -> str\n```',
+        ],
         range: [
           { character: 3, line: 23 },
           { character: 10, line: 23 },
