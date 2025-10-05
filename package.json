@@ -15,7 +15,7 @@
   ],
   "displayName": "Jinja Language Server",
   "description": "Feature-rich language server for Jinja.",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "author": "Noam Zaks <noam@noamzaks.com> (https://noamzaks.com/)",
   "icon": "images/icon-1024.png",
   "license": "MIT",

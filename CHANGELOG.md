@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.5] - 2025-10-06
+
+### Added
+
+- Types are now resolved for unary, binary, test and filter expressions.
+- Completion now supports block names as well.
+- Tests and filters now support signature info, arguments are more accurate.
+
 ## [0.0.4] - 2025-10-05
 
 ### Added
