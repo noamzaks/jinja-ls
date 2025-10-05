@@ -5,10 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.4] - 2025-10-05
 
 ### Added
 
+- Additional import paths can now be added in the extension's configuration.
+
+## [0.0.3] - 2025-10-05
+
+### Added
+
+- Globals can now be set with the `jinja-ls.addGlobals` command.
 - Type inference for iteration of arrays and tuples is now supported.
 
 ### Changed

@@ -133,18 +133,22 @@ const analyzeDocument = async (document: TextDocument) => {
   }
 }
 
-lspDocuments.onDidChangeContent(async (event) => {
-  if (!configuration.initialized) {
-    const currentConfiguration = await connection.workspace.getConfiguration({
-      section: "jinjaLS",
-    })
-    for (const key in currentConfiguration) {
-      configuration[key] = currentConfiguration[key]
-    }
-    configuration.initialized = true
-  }
-
+lspDocuments.onDidChangeContent((event) => {
   analyzeDocument(event.document)
+
+  if (!configuration.initialized) {
+    connection.workspace
+      .getConfiguration({
+        section: "jinjaLS",
+      })
+      .then((currentConfiguration) => {
+        for (const key in currentConfiguration) {
+          configuration[key] = currentConfiguration[key]
+        }
+        configuration.initialized = true
+        analyzeDocument(event.document)
+      })
+  }
 })
 
 const getDocumentAST = (contents: string) => {
