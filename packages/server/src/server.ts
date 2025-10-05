@@ -2,7 +2,7 @@ import { ast, parse, tokenize } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { createConnection } from "vscode-languageserver/node"
-import { filters, tests } from "./generated"
+import { BUILTIN_FILTERS, BUILTIN_TESTS } from "./constants"
 import { getTokens, legend } from "./semantic"
 import {
   configuration,
@@ -256,51 +256,6 @@ connection.onHover(async (params) => {
       return
     }
 
-    // Builtin Filter
-    if (
-      filters[token.value] &&
-      token.parent instanceof ast.Identifier &&
-      ((token.parent.parent instanceof ast.CallExpression &&
-        token.parent.parent.parent instanceof ast.FilterExpression) ||
-        token.parent.parent instanceof ast.FilterExpression ||
-        token.parent.parent instanceof ast.FilterStatement)
-    ) {
-      return {
-        contents: [
-          {
-            language: "python",
-            value: `(${filters[token.value].parameters
-              .map((p) => (p.default ? `${p.name}=${p.default}` : p.name))
-              .join(", ")}) -> Any`,
-          },
-          filters[token.value].brief,
-        ],
-      } satisfies lsp.Hover
-    }
-
-    // Builtin Test
-    if (
-      tests[token.value] &&
-      token.parent instanceof ast.Identifier &&
-      ((token.parent.parent instanceof ast.TestExpression &&
-        token.parent.parent.test === token.parent) ||
-        (token.parent.parent instanceof ast.CallExpression &&
-          token.parent.parent.parent instanceof ast.TestExpression &&
-          token.parent.parent.callee === token.parent))
-    ) {
-      return {
-        contents: [
-          {
-            language: "python",
-            value: `(${tests[token.value].parameters
-              .map((p) => (p.default ? `${p.name}=${p.default}` : p.name))
-              .join(", ")}) -> bool`,
-          },
-          tests[token.value].brief,
-        ],
-      } satisfies lsp.Hover
-    }
-
     const callExpression = parentOfType(token, "CallExpression") as
       | ast.CallExpression
       | undefined
@@ -409,9 +364,14 @@ connection.onHover(async (params) => {
       const resolvedType = resolveType(nodeType)
 
       if (nodeType !== undefined && resolvedType !== undefined) {
-        let value = `${identifier.value}: ${resolvedType.name}`
-        if (nodeType.literalValue !== undefined) {
-          value += ` = ${nodeType.literalValue.length < HOVER_LITERAL_MAX_LENGTH ? nodeType.literalValue : "..."}`
+        let value: string
+        if (resolvedType.signature !== undefined) {
+          value = stringifySignatureInfo(resolvedType.signature)
+        } else {
+          value = `${identifier.value}: ${resolvedType.name}`
+          if (nodeType.literalValue !== undefined) {
+            value += ` = ${nodeType.literalValue.length < HOVER_LITERAL_MAX_LENGTH ? nodeType.literalValue : "..."}`
+          }
         }
         const contents: lsp.MarkedString[] = [
           {
@@ -419,8 +379,10 @@ connection.onHover(async (params) => {
             value,
           },
         ]
-        if (nodeType.documentation) {
-          contents.push(nodeType.documentation)
+        if (nodeType.documentation ?? resolvedType?.signature?.documentation) {
+          contents.push(
+            nodeType.documentation ?? resolvedType?.signature?.documentation,
+          )
         }
         return {
           contents,
@@ -684,14 +646,14 @@ connection.onCompletion(async (params) => {
         token.parent.test instanceof ast.Identifier &&
         token.parent.test.value === "error")
     ) {
-      return Object.entries(tests)
+      return Object.entries(BUILTIN_TESTS)
         .filter(([testName]) => /\w/.test(testName))
         .map(
           ([testName, test]) =>
             ({
               label: testName,
               kind: lsp.CompletionItemKind.Function,
-              documentation: test.brief,
+              documentation: test.signature.documentation,
             }) satisfies lsp.CompletionItem,
         )
     }
@@ -705,12 +667,12 @@ connection.onCompletion(async (params) => {
         token.parent.filter instanceof ast.Identifier &&
         token.parent.filter.value === "error")
     ) {
-      return Object.entries(filters).map(
+      return Object.entries(BUILTIN_FILTERS).map(
         ([filterName, filter]) =>
           ({
             label: filterName,
             kind: lsp.CompletionItemKind.Function,
-            documentation: filter.brief,
+            documentation: filter.signature.documentation,
           }) satisfies lsp.CompletionItem,
       )
     }

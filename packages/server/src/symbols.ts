@@ -1,6 +1,7 @@
 import { ast, formatExpression } from "@jinja-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { URI, Utils } from "vscode-uri"
+import { BUILTIN_FILTERS, BUILTIN_TESTS, SPECIAL_SYMBOLS } from "./constants"
 import {
   configuration,
   documentASTs,
@@ -249,201 +250,6 @@ export const isInScope = (
   return false
 }
 
-const SPECIAL_SYMBOLS: Record<
-  string,
-  Record<string, string | TypeReference | TypeInfo | undefined>
-> = {
-  // These are the globals.
-  Program: {
-    true: "bool",
-    false: "bool",
-    none: "None",
-    True: "bool",
-    False: "bool",
-    None: "None",
-    range: {
-      name: "class",
-      signature: {
-        arguments: [
-          {
-            name: "start",
-            type: "int",
-          },
-          {
-            name: "stop",
-            type: "int",
-          },
-          {
-            name: "step",
-            type: "int",
-          },
-        ],
-        return: {
-          name: "range",
-          elementType: "int",
-        },
-      },
-    },
-    dict: {
-      name: "class",
-      signature: {
-        documentation:
-          "A convenient alternative to dict literals. {'foo': 'bar'} is the same as dict(foo='bar').",
-        return: "dict",
-      },
-    },
-    lipsum: {
-      name: "function",
-      signature: {
-        documentation: "Generate some lorem ipsum for the template.",
-        arguments: [
-          {
-            name: "html",
-            type: "bool",
-            default: "True",
-          },
-          {
-            name: "min",
-            type: "int",
-            default: "20",
-          },
-          {
-            name: "max",
-            type: "int",
-            default: "100",
-          },
-        ],
-        return: "str",
-      },
-    },
-    cycler: {
-      name: "class",
-      signature: {
-        documentation:
-          "Cycle through values by yield them one at a time, then restarting once the end is reached.",
-      },
-    },
-    joiner: {
-      name: "class",
-      signature: {
-        arguments: [
-          {
-            name: "sep",
-            type: "str",
-            default: '", "',
-          },
-        ],
-        documentation:
-          'A tiny helper that can be used to "join" multiple sections. A joiner is passed a string and will return that string every time it\'s called, except the first time (in which case it returns an empty string).',
-        return: "joiner",
-      },
-    },
-    namespace: {
-      name: "class",
-      signature: {
-        documentation:
-          "A namespace object that can hold arbitrary attributes.  It may be initialized from a dictionary or with keyword arguments.",
-        return: "namespace",
-      },
-    },
-  },
-  Macro: {
-    varargs: {
-      name: "tuple",
-      documentation:
-        "If more positional arguments are passed to the macro than accepted by the macro, they end up in the special varargs variable as a list of values.",
-    },
-    kwargs: {
-      name: "dict",
-      documentation:
-        "Like varargs but for keyword arguments. All unconsumed keyword arguments are stored in this special variable.",
-    },
-    caller: {
-      name: "function",
-      signature: {
-        return: "str",
-        documentation:
-          "If the macro was called from a call tag, the caller is stored in this variable as a callable macro.",
-      },
-    },
-  },
-  For: {
-    loop: {
-      name: "loop",
-      properties: {
-        index: {
-          type: "int",
-          documentation: "The current iteration of the loop. (1 indexed)",
-        },
-        index0: {
-          type: "int",
-          documentation: "The current iteration of the loop. (0 indexed)",
-        },
-        revindex: {
-          type: "int",
-          documentation:
-            "The number of iterations from the end of the loop (1 indexed)",
-        },
-        revindex0: {
-          type: "int",
-          documentation:
-            "The number of iterations from the end of the loop (0 indexed)",
-        },
-        first: { type: "bool", documentation: "True if first iteration." },
-        last: { type: "bool", documentation: "True if last iteration." },
-        length: {
-          type: "int",
-          documentation: "The number of items in the sequence.",
-        },
-        depth: {
-          type: "int",
-          documentation:
-            "Indicates how deep in a recursive loop the rendering currently is. Starts at level 1",
-        },
-        depth0: {
-          type: "int",
-          documentation:
-            "Indicates how deep in a recursive loop the rendering currently is. Starts at level 0",
-        },
-        previtem: {
-          type: "unknown",
-          documentation:
-            "The item from the previous iteration of the loop. Undefined during the first iteration.",
-        },
-        nextitem: {
-          type: "unknown",
-          documentation:
-            "The item from the following iteration of the loop. Undefined during the last iteration.",
-        },
-        cycle: {
-          name: "function",
-          signature: {
-            documentation:
-              "A helper function to cycle between a list of sequences.",
-          },
-        },
-        changed: {
-          name: "function",
-          signature: {
-            return: "bool",
-            documentation:
-              "True if previously called with a different value (or not called at all).",
-          },
-        },
-      },
-    },
-  },
-  Block: {
-    super: {
-      name: "super",
-      signature: {
-        return: "str",
-        documentation: "The results of the parent block.",
-      },
-    },
-  },
-}
-
 export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
   symbols: Map<string, SymbolInfo[]> | undefined,
   name: string,
@@ -471,6 +277,40 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
         type: "Variable",
         node: program,
         getType: () => getTypeInfoFromJS(globals[name]),
+      } as SymbolInfo as Extract<SymbolInfo, { type: K }>
+    }
+
+    if (
+      inScopeOf instanceof ast.Identifier &&
+      ((inScopeOf.parent instanceof ast.CallExpression &&
+        inScopeOf.parent.parent instanceof ast.TestExpression &&
+        inScopeOf.parent.parent.test === inScopeOf.parent &&
+        inScopeOf.parent.callee === inScopeOf) ||
+        (inScopeOf.parent instanceof ast.TestExpression &&
+          inScopeOf === inScopeOf.parent.test))
+    ) {
+      return {
+        type: "Variable",
+        node: inScopeOf,
+        getType: () => BUILTIN_TESTS[inScopeOf.value],
+      } as SymbolInfo as Extract<SymbolInfo, { type: K }>
+    }
+
+    if (
+      inScopeOf instanceof ast.Identifier &&
+      ((inScopeOf.parent instanceof ast.CallExpression &&
+        (inScopeOf.parent.parent instanceof ast.FilterExpression ||
+          inScopeOf.parent.parent instanceof ast.FilterStatement) &&
+        inScopeOf.parent.parent.filter === inScopeOf.parent &&
+        inScopeOf.parent.callee === inScopeOf) ||
+        ((inScopeOf.parent instanceof ast.FilterExpression ||
+          inScopeOf.parent instanceof ast.FilterStatement) &&
+          inScopeOf.parent.filter === inScopeOf))
+    ) {
+      return {
+        type: "Variable",
+        node: inScopeOf,
+        getType: () => BUILTIN_FILTERS[inScopeOf.value],
       } as SymbolInfo as Extract<SymbolInfo, { type: K }>
     }
   }

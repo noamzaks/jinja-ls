@@ -13,6 +13,8 @@ export interface SignatureInfo {
   arguments?: ArgumentInfo[]
   return?: TypeInfo | TypeReference | string
   documentation?: string
+  args?: string
+  kwargs?: string
 }
 
 export interface TypeInfo {
