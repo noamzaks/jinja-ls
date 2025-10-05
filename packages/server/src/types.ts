@@ -135,6 +135,41 @@ export const getType = (
     if (calleeType?.signature !== undefined) {
       return resolveType(calleeType.signature.return)
     }
+  } else if (expression instanceof ast.BinaryExpression) {
+    const rightType = resolveType(getType(expression.right, document))
+    const leftType = resolveType(getType(expression.left, document))
+    if (expression.operator.value === "~") {
+      return resolveType("str")
+    } else if (
+      ["int", "float"].includes(leftType?.name) &&
+      ["int", "float"].includes(rightType?.name)
+    ) {
+      if (expression.operator.value === "/") {
+        return resolveType("float")
+      } else if (expression.operator.value === "//") {
+        return resolveType("int")
+      } else if (leftType.name === "float" || rightType.name === "float") {
+        return resolveType("float")
+      } else {
+        return resolveType("int")
+      }
+    } else if (
+      expression.operator.value === "*" &&
+      leftType?.name === "str" &&
+      rightType?.name === "int"
+    ) {
+      return leftType
+    } else if (
+      ["and", "or", "not", "==", "!=", ">", ">=", "<", "<="].includes(
+        expression.operator.value,
+      )
+    ) {
+      return resolveType("bool")
+    }
+  } else if (expression instanceof ast.UnaryExpression) {
+    if (expression.operator.value === "not") {
+      return resolveType("bool")
+    }
   } else if (expression instanceof ast.FilterExpression) {
     return resolveType(
       BUILTIN_FILTERS[expression.filter.identifierName]?.signature?.return,

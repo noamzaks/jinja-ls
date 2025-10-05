@@ -336,7 +336,11 @@ export const getTokens = (statements: ast.Statement[]) => {
         items.push({
           start: binaryExpressionStatement.operator.start,
           end: binaryExpressionStatement.operator.end,
-          tokenType: 7,
+          tokenType: ["and", "or", "not"].includes(
+            binaryExpressionStatement.operator.value,
+          )
+            ? 3
+            : 7,
           tokenModifiers: 0,
         })
         break
