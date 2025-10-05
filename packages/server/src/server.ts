@@ -269,7 +269,7 @@ connection.onHover(async (params) => {
           callExpression.callee.property === token.parent))
     ) {
       // Expression with known function type
-      const callee = (callExpression as ast.CallExpression).callee
+      const callee = callExpression.callee
       const resolvedType = resolveType(getType(callee, document))
       if (resolvedType?.signature !== undefined) {
         const contents: lsp.MarkedString[] = [
@@ -626,7 +626,15 @@ connection.onCompletion(async (params) => {
     const text = document
       .getText(lsp.Range.create(lsp.Position.create(0, 0), params.position))
       .trimEnd()
-    if (!(text.endsWith("{{") || text.endsWith("|") || text.endsWith("is"))) {
+    const lastLine = text.slice(text.lastIndexOf("\n") + 1)
+    if (
+      !(
+        text.endsWith("{{") ||
+        text.endsWith("|") ||
+        text.endsWith("is") ||
+        /{%[ \t]*filter/.test(lastLine)
+      )
+    ) {
       return
     }
   }
@@ -660,12 +668,14 @@ connection.onCompletion(async (params) => {
 
     if (
       (token.parent instanceof ast.Identifier &&
-        token.parent.parent instanceof ast.FilterExpression &&
+        (token.parent.parent instanceof ast.FilterExpression ||
+          token.parent.parent instanceof ast.FilterStatement) &&
         token.parent.parent.filter.identifierName === token.parent.value) ||
-      (token.value === "|" &&
-        token.parent instanceof ast.FilterExpression &&
-        token.parent.filter instanceof ast.Identifier &&
-        token.parent.filter.value === "error")
+      ((token.parent instanceof ast.FilterExpression ||
+        token.parent instanceof ast.FilterStatement) &&
+        ((token.parent.filter instanceof ast.Identifier &&
+          token.parent.filter.value === "error") ||
+          token.parent.filter instanceof ast.MissingNode))
     ) {
       return Object.entries(BUILTIN_FILTERS).map(
         ([filterName, filter]) =>

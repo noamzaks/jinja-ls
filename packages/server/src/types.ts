@@ -163,7 +163,14 @@ export const argumentToString = (argument: ArgumentInfo) => {
 }
 
 export const stringifySignatureInfo = (s: SignatureInfo) => {
-  let signature = `(${s.arguments?.map(argumentToString).join(", ") ?? ""})`
+  const args = s.arguments ?? []
+  if (s.args !== undefined) {
+    args.push({ name: "*" + s.args })
+  }
+  if (s.kwargs !== undefined) {
+    args.push({ name: "**" + s.kwargs })
+  }
+  let signature = `(${args.length !== 0 ? args.map(argumentToString).join(", ") : ""})`
   const returnName = resolveType(s.return)?.name
   if (returnName) {
     signature += " -> " + returnName
