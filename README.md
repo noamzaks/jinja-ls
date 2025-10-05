@@ -12,18 +12,9 @@
     <b>Feature-rich language server for Jinja.</b>
 </p>
 
-> [!WARNING]
-> Jinja Language Server is currently in early development.
+Jinja Language Server is in early development, please report bugs on GitHub!
 
-## Acknowledgements
-
-- The [language](./packages/language/) package is based on [@huggingface/jinja](https://github.com/huggingface/huggingface.js/tree/main/packages/jinja), licensed under MIT by Hugging Face.
-- Basic functionality and language associations are provided by the awesome [jinjahtml-vscode](https://github.com/samuelcolvin/jinjahtml-vscode) extension!
-- The overall layout as well as many code samples are taken from Microsoft's [lsp-sample](https://github.com/microsoft/vscode-extension-samples/tree/main/lsp-sample) licensed under MIT.
-- Some of the Jinja documentation is also provided (licensed under MIT), and some of the Python documentation as well (licensed under zero-clause BSD)
-- Special thank you to Omri for the original idea.
-
-## Roadmap
+## Features
 
 - [x] Provide diagnostics for lexing and parsing errors
 - [x] Provide semantic highlighting
@@ -44,3 +35,48 @@
 - [ ] Make lexer/parser more performant (incremental)
 - [ ] Support custom start/end symbols (instead of `{{, {%, {#`)
 - [ ] Rewrite in rust
+
+## Demo
+
+Errors are shown using the awesome [Error Lens](https://marketplace.visualstudio.com/items?itemName=usernamehw.errorlens) extension!
+
+![autocomplete filters demo](./images/demo-autocomplete-filter.png)
+![autocomplete globals demo](./images/demo-autocomplete-globals.png)
+![autocomplete str demo](./images/demo-autocomplete-str.png)
+![autocomplete tests demo](./images/demo-autocomplete-test.png)
+![autocomplete diagnostics demo](./images/demo-diagnostics.png)
+![include analysis demo](./images/demo-include.png)
+![macro signature demo](./images/demo-macro-signature.png)
+
+## API
+
+You can add globals from your extension with the `jinja-ls.addGlobals` command, for example:
+
+```ts
+vscode.commands.executeCommand("jinja-ls.setGlobals", {
+  hi: "hello",
+  other: 1574,
+  test: 1.2,
+  deep: { object: [1, 2] },
+})
+```
+
+This merges the existing globals set by previous calls to `jinja-ls.addGlobals`, if you wish to remove them set the second parameter `merge` to false:
+
+```ts
+vscode.commands.executeCommand(
+  "jinja-ls.setGlobals",
+  {
+    hi: "hello",
+  },
+  false,
+)
+```
+
+## Acknowledgements
+
+- The [language](./packages/language/) package is based on [@huggingface/jinja](https://github.com/huggingface/huggingface.js/tree/main/packages/jinja), licensed under MIT by Hugging Face.
+- Basic functionality and language associations are provided by the awesome [jinjahtml-vscode](https://github.com/samuelcolvin/jinjahtml-vscode) extension!
+- The overall layout as well as many code samples are taken from Microsoft's [lsp-sample](https://github.com/microsoft/vscode-extension-samples/tree/main/lsp-sample) licensed under MIT.
+- Some of the Jinja documentation is also provided (licensed under MIT), and some of the Python documentation as well (licensed under zero-clause BSD)
+- Special thank you to Omri for the original idea.
