@@ -14,7 +14,11 @@ export const documentASTs = new Map<
 >()
 export const documentImports = new Map<
   string,
-  (ast.Include | ast.Import | ast.FromImport | ast.Extends)[]
+  [ast.Include | ast.Import | ast.FromImport | ast.Extends, string][]
 >()
 export const documentSymbols = new Map<string, Map<string, SymbolInfo[]>>()
 export const globals: Record<string, unknown> = {}
+export const configuration: {
+  importPaths?: string[] | undefined
+  initialized: boolean
+} = { initialized: false }

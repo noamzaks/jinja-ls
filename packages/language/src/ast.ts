@@ -242,6 +242,7 @@ export class Include extends Statement {
     public context: Identifier | undefined,
   ) {
     super()
+    this.addChildren(source, ignoreMissing, context)
   }
 }
 
@@ -255,6 +256,7 @@ export class Import extends Statement {
     public context: Identifier | undefined,
   ) {
     super()
+    this.addChildren(source, asToken, name, context)
   }
 }
 
@@ -272,6 +274,10 @@ export class FromImport extends Statement {
     public context: Identifier | undefined,
   ) {
     super()
+    this.addChildren(source, importToken, context)
+    for (const i of imports) {
+      this.addChildren(i.source, i.asToken, i.name)
+    }
   }
 }
 
@@ -280,6 +286,7 @@ export class Extends extends Statement {
 
   constructor(public source: Expression) {
     super()
+    this.addChildren(source)
   }
 }
 

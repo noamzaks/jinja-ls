@@ -70,7 +70,20 @@
         "command": "jinja-ls.restart",
         "title": "Jinja LS: Restart Server"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Jinja LS",
+      "properties": {
+        "jinjaLS.importPaths": {
+          "type": "array",
+          "default": [],
+          "description": "Additional paths to search for include/import/extends",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",

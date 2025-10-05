@@ -27,7 +27,7 @@ Jinja Language Server is in early development, please report bugs on GitHub!
 - [x] Track types of expressions including globals and special symbols
 - [x] Provide auto-complete for built-in tests and filters and variables
 - [x] Provide an API for other extensions to add globals
-- [ ] Support custom import directories
+- [x] Support custom import directories
 - [ ] Provide format document
 - [ ] Provide document symbols
 - [ ] Provide documentation for user-defined symbols
@@ -48,7 +48,13 @@ Errors are shown using the awesome [Error Lens](https://marketplace.visualstudio
 ![include analysis demo](./images/demo-include.png)
 ![macro signature demo](./images/demo-macro-signature.png)
 
-## API
+## Usage
+
+### Import Paths
+
+In VSCode settings you may add directories to "Jinjs LS: Import Paths" to be searched in include/import/from import/extends statements.
+
+### Custom Globals
 
 You can add globals from your extension with the `jinja-ls.addGlobals` command, for example:
 

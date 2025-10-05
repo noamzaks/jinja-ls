@@ -2,6 +2,7 @@ import { ast, formatExpression } from "@jinja-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { URI, Utils } from "vscode-uri"
 import {
+  configuration,
   documentASTs,
   documentImports,
   documents,
@@ -182,14 +183,26 @@ export const argToPython = (arg: ast.Statement) => {
   }
 }
 
-export const importToUri = (
+export const findImport = async (
   i: ast.Include | ast.Import | ast.FromImport | ast.Extends,
   uri: string,
+  readFile: (uri: string) => Promise<string | undefined>,
 ) => {
   if (!(i.source instanceof ast.StringLiteral)) {
     return
   }
-  return Utils.joinPath(URI.parse(uri), "..", i.source.value).toString()
+  const importPaths = [
+    Utils.joinPath(URI.parse(uri), ".."),
+    ...(configuration?.importPaths?.map((v) => URI.parse(v)) ?? []),
+  ]
+  for (const path of importPaths) {
+    const uri = Utils.joinPath(path, i.source.value).toString()
+    const contents = await readFile(uri)
+    if (contents !== undefined) {
+      return [uri, contents]
+    }
+  }
+  return []
 }
 
 export const getScope = (node: ast.Node | undefined, initial = false) => {
@@ -496,7 +509,8 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
     return symbols
   }
 
-  for (const importStatement of imports ?? []) {
+  for (const i of imports ?? []) {
+    const importStatement = i[0]
     if (
       importTypes !== undefined &&
       !importTypes.includes(importStatement.type)
@@ -508,7 +522,7 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
       continue
     }
 
-    const importedUri = importToUri(importStatement, document.uri)
+    const importedUri = i[1]
     if (!importedUri) {
       continue
     }

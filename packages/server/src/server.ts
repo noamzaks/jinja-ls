@@ -2,10 +2,10 @@ import { ast, parse, tokenize } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { createConnection } from "vscode-languageserver/node"
-import { URI, Utils } from "vscode-uri"
 import { filters, tests } from "./generated"
 import { getTokens, legend } from "./semantic"
 import {
+  configuration,
   documentASTs,
   documentImports,
   documents,
@@ -14,9 +14,9 @@ import {
 } from "./state"
 import {
   collectSymbols,
+  findImport,
   findSymbol,
   findSymbolsInScope,
-  importToUri,
   SymbolInfo,
 } from "./symbols"
 import { getType, resolveType, stringifySignatureInfo } from "./types"
@@ -85,7 +85,7 @@ connection.onInitialize(() => {
   } satisfies lsp.InitializeResult
 })
 
-const analyzeDocument = (document: TextDocument) => {
+const analyzeDocument = async (document: TextDocument) => {
   documents.set(document.uri, document)
   const ast = getDocumentAST(document.getText())
   documentASTs.set(document.uri, ast)
@@ -99,34 +99,51 @@ const analyzeDocument = (document: TextDocument) => {
     })
 
     documentSymbols.set(document.uri, symbols)
-    documentImports.set(document.uri, imports)
 
-    for (const s of imports) {
-      const importedUri = importToUri(s, document.uri)
-      if (importedUri !== undefined) {
-        connection
-          .sendRequest(ReadFileRequest, { uri: importedUri })
-          .then(({ contents }) => {
-            if (
-              contents &&
-              contents !== documents.get(importedUri)?.getText()
-            ) {
-              analyzeDocument(
-                TextDocument.create(
-                  importedUri,
-                  document.languageId,
-                  document.version,
-                  contents,
-                ),
-              )
-            }
-          })
+    const documentsToAnalyze: [string, string][] = []
+    const resolvedImports: [
+      ast.Include | ast.Import | ast.FromImport | ast.Extends,
+      string,
+    ][] = []
+    for (const i of imports) {
+      const [uri, contents] = await findImport(
+        i,
+        document.uri,
+        async (uri) =>
+          (await connection.sendRequest(ReadFileRequest, { uri }))?.contents,
+      )
+      documentsToAnalyze.push([uri, contents])
+      resolvedImports.push([i, uri])
+    }
+
+    documentImports.set(document.uri, resolvedImports)
+
+    for (const [uri, contents] of documentsToAnalyze) {
+      if (contents !== documents.get(uri)?.getText()) {
+        analyzeDocument(
+          TextDocument.create(
+            uri,
+            document.languageId,
+            document.version,
+            contents,
+          ),
+        )
       }
     }
   }
 }
 
-lspDocuments.onDidChangeContent((event) => {
+lspDocuments.onDidChangeContent(async (event) => {
+  if (!configuration.initialized) {
+    const currentConfiguration = await connection.workspace.getConfiguration({
+      section: "jinjaLS",
+    })
+    for (const key in currentConfiguration) {
+      configuration[key] = currentConfiguration[key]
+    }
+    configuration.initialized = true
+  }
+
   analyzeDocument(event.document)
 })
 
@@ -142,9 +159,10 @@ const getDocumentAST = (contents: string) => {
 }
 
 connection.languages.diagnostics.on(async (params) => {
-  const { parserErrors, lexerErrors } = documentASTs.get(
-    params.textDocument.uri,
-  )
+  const documentAST = documentASTs.get(params.textDocument.uri)
+  const imports = documentImports.get(params.textDocument.uri)
+  const parserErrors = documentAST?.parserErrors
+  const lexerErrors = documentAST?.lexerErrors
 
   const items: lsp.Diagnostic[] = []
   const document = documents.get(params.textDocument.uri)
@@ -177,6 +195,19 @@ connection.languages.diagnostics.on(async (params) => {
           document.positionAt(e.end),
         ),
         severity: lsp.DiagnosticSeverity.Error,
+      })
+    }
+  }
+
+  for (const [i, uri] of imports ?? []) {
+    if (uri === undefined) {
+      items.push({
+        message: "Couldn't resolve import, try adding to Jinja LS import paths",
+        range: lsp.Range.create(
+          document.positionAt(i.source.getStart()),
+          document.positionAt(i.source.getEnd()),
+        ),
+        severity: lsp.DiagnosticSeverity.Warning,
       })
     }
   }
@@ -444,13 +475,11 @@ connection.onDefinition(async (params) => {
       includeExpression !== undefined &&
       includeExpression.source instanceof ast.StringLiteral
     ) {
-      const importedFilename = (includeExpression.source as ast.StringLiteral)
-        .value
-      const uri = Utils.joinPath(
-        URI.parse(document.uri),
-        "..",
-        importedFilename,
-      ).toString()
+      const uri = (imports.find((i) => i[0] === includeExpression) ?? [])[1]
+
+      if (uri === undefined) {
+        return
+      }
 
       const sourceLiteral = includeExpression.source as ast.StringLiteral
       return [
