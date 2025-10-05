@@ -62,7 +62,7 @@ export const activate = (context: vscode.ExtensionContext) => {
         vscode.Uri.parse(uri).fsPath,
       )
       return { contents: document.getText() }
-    } catch (e) {
+    } catch {
       return {}
     }
   })

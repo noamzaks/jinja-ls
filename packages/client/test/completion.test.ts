@@ -3,7 +3,6 @@ import * as vscode from "vscode"
 import { activate, getDocUri } from "./helper"
 
 suite("Should provide completions", () => {
-  const libUri = getDocUri("lib.jinja")
   const errorsUri = getDocUri("errors.jinja")
 
   test("Returns completions for errors.jinja", async () => {

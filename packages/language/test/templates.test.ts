@@ -3743,7 +3743,7 @@ const TEST_PARSED: Record<string, Partial<Token>[]> = {
   ],
 }
 
-const TEST_CONTEXT: Record<string, any> = {
+const TEST_CONTEXT: Record<string, Record<string, unknown>> = {
   // Text nodes
   NO_TEMPLATE: {},
   TEXT_NODES: {},
@@ -3818,7 +3818,7 @@ const TEST_CONTEXT: Record<string, any> = {
   FUNCTIONS: {
     x: 10,
     apple: "apple",
-    func: (...args: any[]) => args.length,
+    func: (...args: unknown[]) => args.length,
   },
 
   // Object properties

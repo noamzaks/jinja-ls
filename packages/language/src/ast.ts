@@ -19,7 +19,6 @@ export class Node {
 
   addChild(child: Node, name: string | undefined = undefined) {
     if (name !== undefined) {
-      // @ts-ignore
       this[name] = child
     }
     child.parent = this

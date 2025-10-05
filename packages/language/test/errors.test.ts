@@ -536,7 +536,8 @@ describe("Parsing error recovery", () => {
   for (const [name, test] of Object.entries(PARSER_ERRORS)) {
     it(`should recover and report parser errors ${name}`, () => {
       const [tokens] = tokenize(test.text, {}, true)
-      const [_nodes, _tokenNodes, errors] = parse(tokens, true)
+      const parsed = parse(tokens, true)
+      const errors = parsed[2]
       expect(errors).toMatchObject(test.errors)
     })
   }

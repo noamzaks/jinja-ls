@@ -121,6 +121,7 @@ export const getTokens = (statements: ast.Statement[]) => {
             tokenModifiers: 0,
           })
         }
+        break
       case "Extends":
         const extendsStatement = statement as ast.Extends
         statements.push(extendsStatement.source)

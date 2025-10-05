@@ -30,7 +30,7 @@ const ReadFileRequest = new lsp.RequestType<
 const connection = createConnection(lsp.ProposedFeatures.all)
 const lspDocuments = new lsp.TextDocuments(TextDocument)
 
-connection.onInitialize((params) => {
+connection.onInitialize(() => {
   return {
     capabilities: {
       textDocumentSync: lsp.TextDocumentSyncKind.Incremental,

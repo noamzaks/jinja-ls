@@ -1506,7 +1506,6 @@ export class Interpreter {
         }
       }
 
-      // @ts-ignore
       items.push(current)
       scopeUpdateFunctions.push(scopeUpdateFunction)
     }
