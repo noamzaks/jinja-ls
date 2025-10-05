@@ -632,7 +632,8 @@ connection.onCompletion(async (params) => {
         text.endsWith("{{") ||
         text.endsWith("|") ||
         text.endsWith("is") ||
-        /{%[ \t]*filter/.test(lastLine)
+        /{%[ \t]*filter/.test(lastLine) ||
+        /{%[ \t]*block/.test(lastLine)
       )
     ) {
       return
@@ -687,6 +688,20 @@ connection.onCompletion(async (params) => {
       )
     }
 
+    const block = parentOfType(token, "Block") as ast.Block | undefined
+    if (
+      (token.parent instanceof ast.Identifier &&
+        token.parent.parent instanceof ast.Block &&
+        token.parent.parent.name === token.parent) ||
+      (token.parent instanceof ast.Block && token.parent.name.value === "error")
+    ) {
+      const symbols = findSymbolsInScope(block, "Block", document)
+      return Array.from(symbols.keys()).map((symbolName) => ({
+        label: symbolName,
+        kind: lsp.CompletionItemKind.Function,
+      }))
+    }
+
     if (token.parent instanceof ast.MemberExpression) {
       const object = token.parent.object
       const symbolType = getType(object, document)
@@ -727,7 +742,9 @@ connection.onCompletion(async (params) => {
         }
         return completions
       }
-    } else if (token.parent !== undefined) {
+    }
+
+    if (token.parent !== undefined) {
       const symbols = findSymbolsInScope(token.parent, "Variable", document)
       const completions: lsp.CompletionItem[] = []
       for (const [symbolName, [symbol, document]] of symbols.entries()) {

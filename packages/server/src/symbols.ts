@@ -190,7 +190,7 @@ export const findImport = async (
   readFile: (uri: string) => Promise<string | undefined>,
 ) => {
   if (!(i.source instanceof ast.StringLiteral)) {
-    return
+    return []
   }
   const importPaths = [
     Utils.joinPath(URI.parse(uri), ".."),
@@ -490,7 +490,11 @@ export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
   if (program !== undefined && symbols !== undefined) {
     for (const [symbolName, symbolValues] of symbols.entries() ?? []) {
       for (const value of symbolValues) {
-        if (value.type === type && isInScope(value.node, node, program)) {
+        if (
+          value.type === type &&
+          isInScope(value.node, node, program) &&
+          value.node !== node
+        ) {
           result.set(symbolName, [
             value as unknown as Extract<SymbolInfo, { type: K }>,
             document,
