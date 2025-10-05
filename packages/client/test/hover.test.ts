@@ -28,6 +28,15 @@ suite("Should provide hover", () => {
   })
 })
 
+const hoverToContents = (h: vscode.Hover) => {
+  return h.contents.map((c) => {
+    if (typeof c === "string") {
+      return c.trim()
+    }
+    return c.value.trim()
+  })
+}
+
 export const getHover = async (uri: vscode.Uri, position: vscode.Position) => {
   await activate(uri)
   const hovers: vscode.Hover[] = await vscode.commands.executeCommand(
@@ -38,8 +47,7 @@ export const getHover = async (uri: vscode.Uri, position: vscode.Position) => {
   expect(hovers.length).toEqual(1)
   const hover = hovers[0]
   return {
-    // @ts-ignore
-    contents: hover.contents.map((c) => ((c.value ?? c) as string).trim()),
+    contents: hoverToContents(hover),
     range: rangeToJson(hover.range),
   }
 }

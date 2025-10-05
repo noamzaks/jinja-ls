@@ -709,9 +709,10 @@ connection.onCompletion(async (params) => {
                 "\n```" +
                 (docs !== undefined ? "\n" + docs : ""),
             }
-            // @ts-ignore
-          } else if (value?.documentation) {
-            // @ts-ignore
+          } else if (
+            typeof value !== "string" &&
+            value.documentation !== undefined
+          ) {
             documentation = value.documentation
           }
           completions.push({ label: key, kind, documentation })

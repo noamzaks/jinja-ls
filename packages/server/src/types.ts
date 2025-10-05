@@ -16,6 +16,7 @@ export interface SignatureInfo {
 }
 
 export interface TypeInfo {
+  type?: undefined
   // If the type is callable, this is its signature.
   name: string
   signature?: SignatureInfo
@@ -40,9 +41,7 @@ export const resolveType = (
   if (typeof type === "string") {
     return BUILTIN_TYPES[type] ?? { name: type }
   }
-  // @ts-ignore
   if (type?.type) {
-    // @ts-ignore
     return BUILTIN_TYPES[type.type]
   }
   return type as TypeInfo | undefined
