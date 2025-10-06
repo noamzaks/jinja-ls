@@ -6,7 +6,7 @@ import * as lsp from "vscode-languageclient/node"
 let client: lsp.LanguageClient
 
 const SetGlobalsRequest = new lsp.RequestType<
-  { globals: Record<string, unknown>; merge: boolean },
+  { globals: Record<string, unknown>; uri: string | undefined; merge: boolean },
   { success: boolean },
   void
 >("jinja/setGlobals")
@@ -77,8 +77,8 @@ export const activate = (context: vscode.ExtensionContext) => {
     vscode.commands.registerCommand("jinja-ls.restart", () => client.restart()),
     vscode.commands.registerCommand(
       "jinja-ls.setGlobals",
-      (globals: Record<string, unknown>, merge = true) =>
-        client.sendRequest(SetGlobalsRequest, { globals, merge }),
+      (globals: Record<string, unknown>, uri?: string, merge = true) =>
+        client.sendRequest(SetGlobalsRequest, { globals, uri, merge }),
     ),
   )
 }

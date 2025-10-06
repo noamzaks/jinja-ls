@@ -2,11 +2,13 @@ import { ast, parse, tokenize } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { createConnection } from "vscode-languageserver/node"
+import { URI, Utils } from "vscode-uri"
 import { BUILTIN_FILTERS, BUILTIN_TESTS } from "./constants"
 import { getTokens, legend } from "./semantic"
 import {
   configuration,
   documentASTs,
+  documentGlobals,
   documentImports,
   documents,
   documentSymbols,
@@ -26,7 +28,7 @@ const HOVER_LITERAL_MAX_LENGTH = 20
 
 const ReadFileRequest = new lsp.RequestType<
   { uri: string },
-  { contents: string },
+  { contents: string | undefined },
   void
 >("jinja/readFile")
 
@@ -85,6 +87,9 @@ connection.onInitialize(() => {
   } satisfies lsp.InitializeResult
 })
 
+const readFile = async (uri: string): Promise<string | undefined> =>
+  (await connection.sendRequest(ReadFileRequest, { uri }))?.contents
+
 const analyzeDocument = async (document: TextDocument) => {
   documents.set(document.uri, document)
   const ast = getDocumentAST(document.getText())
@@ -92,10 +97,11 @@ const analyzeDocument = async (document: TextDocument) => {
   const symbols = new Map<string, SymbolInfo[]>()
   const imports: (ast.Include | ast.Import | ast.FromImport | ast.Extends)[] =
     []
+  const lsCommands: string[] = []
 
   if (ast.program) {
     walk(ast.program, (statement) => {
-      collectSymbols(statement, symbols, imports)
+      collectSymbols(statement, symbols, imports, lsCommands)
     })
 
     documentSymbols.set(document.uri, symbols)
@@ -106,12 +112,7 @@ const analyzeDocument = async (document: TextDocument) => {
       string,
     ][] = []
     for (const i of imports) {
-      const [uri, contents] = await findImport(
-        i,
-        document.uri,
-        async (uri) =>
-          (await connection.sendRequest(ReadFileRequest, { uri }))?.contents,
-      )
+      const [uri, contents] = await findImport(i, document.uri, readFile)
       documentsToAnalyze.push([uri, contents])
       resolvedImports.push([i, uri])
     }
@@ -128,6 +129,23 @@ const analyzeDocument = async (document: TextDocument) => {
             contents,
           ),
         )
+      }
+    }
+
+    for (const command of lsCommands) {
+      const [commandName, ...args] = command.split(" ")
+      if (commandName === "globals") {
+        for (const globalsPath of args) {
+          const uri = Utils.joinPath(
+            URI.parse(document.uri),
+            "..",
+            globalsPath,
+          ).toString()
+          const contents = await readFile(uri)
+          if (globalsPath.endsWith(".json") && contents !== undefined) {
+            setGlobals(JSON.parse(contents), document.uri)
+          }
+        }
       }
     }
   }
@@ -767,24 +785,41 @@ connection.onCompletion(async (params) => {
   }
 })
 
+const setGlobals = (
+  globalsToAdd: Record<string, unknown>,
+  uri?: string,
+  merge = true,
+) => {
+  let g = globals
+  if (uri !== undefined) {
+    if (!documentGlobals[uri]) {
+      documentGlobals[uri] = {}
+    }
+    g = documentGlobals[uri]
+  }
+  if (!merge) {
+    for (const key in globals) {
+      delete g[key]
+    }
+  }
+
+  for (const key in globalsToAdd) {
+    g[key] = globalsToAdd[key]
+  }
+}
+
 connection.onRequest(
   "jinja/setGlobals",
   async ({
     globals: globalsToAdd,
+    uri,
     merge,
   }: {
     globals: Record<string, unknown>
+    uri: string | undefined
     merge: boolean
   }) => {
-    if (!merge) {
-      for (const key in globals) {
-        delete globals[key]
-      }
-    }
-
-    for (const key in globalsToAdd) {
-      globals[key] = globalsToAdd[key]
-    }
+    setGlobals(globalsToAdd, uri, merge)
 
     return { success: true }
   },

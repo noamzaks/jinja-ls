@@ -54,6 +54,16 @@ Errors are shown using the awesome [Error Lens](https://marketplace.visualstudio
 
 In VSCode settings you may add directories to "Jinjs LS: Import Paths" to be searched in include/import/from import/extends statements.
 
+### LS Commands
+
+You can specify LS commands using Jinja comments, for example:
+
+```jinja
+{#- jinja-ls: globals ./globals.json -#}
+```
+
+adds globals from the `./globals.json` file (relative to the document) to the given document!
+
 ### Custom Globals
 
 You can add globals from your extension with the `jinja-ls.addGlobals` command, for example:
@@ -67,7 +77,7 @@ vscode.commands.executeCommand("jinja-ls.setGlobals", {
 })
 ```
 
-This merges the existing globals set by previous calls to `jinja-ls.addGlobals`, if you wish to remove them set the second parameter `merge` to false:
+This merges the existing globals set by previous calls to `jinja-ls.addGlobals`, if you wish to remove them set the third parameter `merge` to false:
 
 ```ts
 vscode.commands.executeCommand(
@@ -75,9 +85,12 @@ vscode.commands.executeCommand(
   {
     hi: "hello",
   },
+  undefined,
   false,
 )
 ```
+
+You may also specify a URI string for the globals with the second argument so the globals are only defined for that document.
 
 ## Acknowledgements
 

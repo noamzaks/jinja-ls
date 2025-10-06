@@ -5,6 +5,7 @@ import { BUILTIN_FILTERS, BUILTIN_TESTS, SPECIAL_SYMBOLS } from "./constants"
 import {
   configuration,
   documentASTs,
+  documentGlobals,
   documentImports,
   documents,
   documentSymbols,
@@ -48,6 +49,7 @@ export const collectSymbols = (
   statement: ast.Node,
   result: Map<string, SymbolInfo[]>,
   imports: (ast.Include | ast.Import | ast.FromImport | ast.Extends)[],
+  lsCommands: string[],
 ) => {
   const addSymbol = (name: string, value: SymbolInfo) => {
     const values = result.get(name) ?? []
@@ -173,6 +175,11 @@ export const collectSymbols = (
     statement instanceof ast.Extends
   ) {
     imports.push(statement)
+  } else if (
+    statement instanceof ast.Comment &&
+    statement.value.trim().startsWith("jinja-ls:")
+  ) {
+    lsCommands.push(statement.value.trim().slice("jinja-ls:".length).trim())
   }
 }
 
@@ -251,6 +258,7 @@ export const isInScope = (
 }
 
 export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
+  document: TextDocument,
   symbols: Map<string, SymbolInfo[]> | undefined,
   name: string,
   type: K,
@@ -277,6 +285,18 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
         type: "Variable",
         node: program,
         getType: () => getTypeInfoFromJS(globals[name]),
+      } as SymbolInfo as Extract<SymbolInfo, { type: K }>
+    }
+
+    if (
+      documentGlobals[document.uri] !== undefined &&
+      documentGlobals[document.uri][name] !== undefined &&
+      program !== undefined
+    ) {
+      return {
+        type: "Variable",
+        node: program,
+        getType: () => getTypeInfoFromJS(documentGlobals[document.uri][name]),
       } as SymbolInfo as Extract<SymbolInfo, { type: K }>
     }
 
@@ -386,6 +406,7 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
             const typeInfo: TypeInfo = { name: "namespace", properties: {} }
             for (const symbolName of importedSymbols?.keys() ?? []) {
               const symbolValue = findSymbolInDocument(
+                importedDocument,
                 importedSymbols,
                 symbolName,
                 "Variable",
@@ -405,6 +426,7 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
       for (const fromImport of importStatement.imports) {
         const symbolName = (fromImport.name ?? fromImport.source).value
         const symbolValue = findSymbolInDocument(
+          importedDocument,
           importedSymbols,
           fromImport.source.value,
           type,
@@ -417,6 +439,7 @@ export const getImportedSymbols = <K extends SymbolInfo["type"]>(
     } else {
       for (const symbolName of importedSymbols?.keys() ?? []) {
         const symbolValue = findSymbolInDocument(
+          importedDocument,
           importedSymbols,
           symbolName,
           type,
@@ -448,6 +471,7 @@ export const findSymbol = <K extends SymbolInfo["type"]>(
 
   if (checkCurrent) {
     const symbol = findSymbolInDocument(
+      document,
       documentSymbols.get(document.uri),
       name,
       type,
@@ -541,6 +565,20 @@ export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
         } as SymbolInfo as Extract<SymbolInfo, { type: K }>,
         document,
       ])
+    }
+
+    if (documentGlobals[document.uri]) {
+      for (const key in documentGlobals[document.uri]) {
+        result.set(key, [
+          {
+            type: "Variable",
+            node: getProgramOf(node),
+            getType: () =>
+              getTypeInfoFromJS(documentGlobals[document.uri][key]),
+          } as SymbolInfo as Extract<SymbolInfo, { type: K }>,
+          document,
+        ])
+      }
     }
   }
 

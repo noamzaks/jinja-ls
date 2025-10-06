@@ -18,6 +18,7 @@ export const documentImports = new Map<
 >()
 export const documentSymbols = new Map<string, Map<string, SymbolInfo[]>>()
 export const globals: Record<string, unknown> = {}
+export const documentGlobals: Record<string, Record<string, unknown>> = {}
 export const configuration: {
   importPaths?: string[] | undefined
   initialized: boolean
