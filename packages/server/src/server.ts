@@ -1,4 +1,5 @@
 import { ast, parse, tokenize } from "@jinja-ls/language"
+import { isAbsolute } from "path"
 import { parse as parseTOML } from "toml"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
@@ -139,7 +140,7 @@ const analyzeDocument = async (document: TextDocument) => {
       if (commandName === "globals") {
         const documentUri = URI.parse(document.uri)
         for (const globalsPath of args) {
-          const uri = globalsPath.startsWith("/")
+          const uri = isAbsolute(globalsPath)
             ? documentUri.with({ path: globalsPath }).toString()
             : Utils.joinPath(documentUri, "..", globalsPath).toString()
           const contents = await readFile(uri)
