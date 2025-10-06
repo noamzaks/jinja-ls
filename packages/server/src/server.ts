@@ -1,8 +1,10 @@
 import { ast, parse, tokenize } from "@jinja-ls/language"
+import { parse as parseTOML } from "toml"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { createConnection } from "vscode-languageserver/node"
 import { URI, Utils } from "vscode-uri"
+import { parse as parseYAML } from "yaml"
 import { BUILTIN_FILTERS, BUILTIN_TESTS } from "./constants"
 import { getTokens, legend } from "./semantic"
 import {
@@ -135,15 +137,25 @@ const analyzeDocument = async (document: TextDocument) => {
     for (const command of lsCommands) {
       const [commandName, ...args] = command.split(" ")
       if (commandName === "globals") {
+        const documentUri = URI.parse(document.uri)
         for (const globalsPath of args) {
-          const uri = Utils.joinPath(
-            URI.parse(document.uri),
-            "..",
-            globalsPath,
-          ).toString()
+          const uri = globalsPath.startsWith("/")
+            ? documentUri.with({ path: globalsPath }).toString()
+            : Utils.joinPath(documentUri, "..", globalsPath).toString()
           const contents = await readFile(uri)
-          if (globalsPath.endsWith(".json") && contents !== undefined) {
+          if (contents === undefined) {
+            continue
+          }
+
+          if (globalsPath.endsWith(".json")) {
             setGlobals(JSON.parse(contents), document.uri)
+          } else if (
+            globalsPath.endsWith(".yaml") ||
+            globalsPath.endsWith(".yml")
+          ) {
+            setGlobals(parseYAML(contents), document.uri)
+          } else if (globalsPath.endsWith(".toml")) {
+            setGlobals(parseTOML(contents), document.uri)
           }
         }
       }
