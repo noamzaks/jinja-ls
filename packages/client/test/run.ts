@@ -16,7 +16,7 @@ async function main() {
       "..",
       "..",
       "packages",
-      "clinet",
+      "client",
       "fixture",
     )
 
