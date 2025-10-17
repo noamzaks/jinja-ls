@@ -72,6 +72,10 @@ export const getTokens = (statements: ast.Statement[]) => {
           })
         }
         break
+      case "Do":
+        const doStatement = statement as ast.DoStatement
+        statements.push(doStatement.expression)
+        break
       case "For":
         const forStatement = statement as ast.For
         statements.push(
@@ -88,6 +92,16 @@ export const getTokens = (statements: ast.Statement[]) => {
             tokenModifiers: 0,
           })
         }
+        break
+      case "With":
+        const withStatement = statement as ast.With
+        statements.push(
+          ...withStatement.assignments.flatMap((assignment) => [
+            assignment.assignee,
+            assignment.value,
+          ]),
+          ...withStatement.body,
+        )
         break
       case "Raw":
         const rawStatement = statement as ast.Raw

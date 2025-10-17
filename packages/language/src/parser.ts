@@ -2,10 +2,14 @@ import {
   ArrayLiteral,
   BinaryExpression,
   Block,
+  Break,
   CallExpression,
   CallStatement,
   Comment,
+  Continue,
+  DoStatement,
   ErrorNode,
+  Expression,
   Extends,
   FilterExpression,
   FilterStatement,
@@ -37,6 +41,7 @@ import {
   TupleLiteral,
   UnaryExpression,
   UnexpectedToken,
+  With,
 } from "./ast"
 import type { TokenType } from "./lexer"
 import { Token, TOKEN_TYPES } from "./lexer"
@@ -311,6 +316,26 @@ export function parse(
         expectCloserStatement(result, "endcall")
         break
       }
+      case "do":
+        ++current
+        const expression = parseExpressionSequence()
+        expect(TOKEN_TYPES.CloseStatement, "'%}'")
+        result = new DoStatement(expression)
+        break
+      case "with":
+        ++current
+        result = parseWithStatement()
+        break
+      case "break":
+        ++current
+        expect(TOKEN_TYPES.CloseStatement, "'%}'")
+        result = new Break()
+        break
+      case "continue":
+        ++current
+        expect(TOKEN_TYPES.CloseStatement, "'%}'")
+        result = new Continue()
+        break
       case "filter": {
         ++current // consume 'filter'
         let filterNode = parsePrimaryExpression()
@@ -798,6 +823,32 @@ export function parse(
       createTokenNode(elseCloseToken),
     )
     result.addChild(createTokenNode(closeToken), "closeToken")
+    return result
+  }
+
+  function parseWithStatement(): With | MissingNode {
+    const assignments: {
+      assignee: Expression
+      equalsToken: TokenNode
+      value: Expression
+    }[] = []
+    while (current < tokens.length && !is(TOKEN_TYPES.CloseStatement)) {
+      if (assignments.length !== 0) {
+        expect(TOKEN_TYPES.Comma, "','")
+      }
+      const assignee = parseExpressionSequence()
+      const equalsToken = new TokenNode(expect(TOKEN_TYPES.Equals, "="))
+      const value = parseExpression()
+      assignments.push({ assignee, equalsToken, value })
+    }
+    expect(TOKEN_TYPES.CloseStatement, "'%}'")
+
+    const body: Statement[] = []
+    while (current < tokens.length && !isStatement("endwith")) {
+      body.push(parseAny())
+    }
+    const result = new With(assignments, body)
+    expectCloserStatement(result, "endwith")
     return result
   }
 

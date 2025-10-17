@@ -223,6 +223,46 @@ export class For extends Statement {
   }
 }
 
+export class Break extends Statement {
+  override type = "Break"
+}
+export class Continue extends Statement {
+  override type = "Continue"
+}
+
+export class With extends Statement {
+  override type = "With"
+  override definesScope = true
+
+  constructor(
+    public assignments: {
+      assignee: Expression
+      equalsToken: TokenNode
+      value: Expression
+    }[],
+    public body: Statement[],
+  ) {
+    super()
+    this.addChildren(
+      ...assignments.flatMap((assignment) => [
+        assignment.assignee,
+        assignment.equalsToken,
+        assignment.value,
+      ]),
+      ...body,
+    )
+  }
+}
+
+export class DoStatement extends Statement {
+  override type = "Do"
+  override definesScope = true
+
+  constructor(public expression: Expression) {
+    super()
+  }
+}
+
 export class SetStatement extends Statement {
   override type = "Set"
   override definesScope = true

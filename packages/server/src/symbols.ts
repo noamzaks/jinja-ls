@@ -58,6 +58,39 @@ export const collectSymbols = (
     result.set(name, values)
   }
 
+  const addSymbolsFromAssignment = (
+    assignee: ast.Node,
+    value: ast.Expression,
+    scope: ast.Node,
+    documentation?: string,
+  ) => {
+    if (assignee instanceof ast.Identifier) {
+      addSymbol(assignee.value, {
+        type: "Variable",
+        node: scope,
+        identifierNode: assignee,
+        getType: (document) => ({ ...getType(value, document), documentation }),
+      })
+    } else if (assignee instanceof ast.TupleLiteral) {
+      for (let i = 0; i < assignee.value.length; i++) {
+        const assigneeItem = assignee.value[i]
+        if (assigneeItem instanceof ast.Identifier) {
+          addSymbol(assigneeItem.value, {
+            type: "Variable",
+            node: scope,
+            identifierNode: assigneeItem,
+            getType: (document) => ({
+              ...resolveType(
+                resolveType(getType(value, document)).properties[i.toString()],
+              ),
+              documentation,
+            }),
+          })
+        }
+      }
+    }
+  }
+
   if (statement instanceof ast.Macro) {
     addSymbol(statement.name.value, {
       type: "Macro",
@@ -175,18 +208,19 @@ export const collectSymbols = (
       })
     }
   } else if (statement instanceof ast.SetStatement) {
-    if (statement.assignee instanceof ast.Identifier) {
-      const variableIdentifier = statement.assignee
-      const variable = variableIdentifier.value
-      addSymbol(variable, {
-        type: "Variable",
-        node: statement,
-        identifierNode: variableIdentifier,
-        getType: (document) => ({
-          ...getType(statement.value, document),
-          documentation: statement.getDocumentation(),
-        }),
-      })
+    addSymbolsFromAssignment(
+      statement.assignee,
+      statement.value,
+      statement,
+      statement.getDocumentation(),
+    )
+  } else if (statement instanceof ast.With) {
+    for (const assignment of statement.assignments) {
+      addSymbolsFromAssignment(
+        assignment.assignee,
+        assignment.value,
+        assignment.assignee,
+      )
     }
   } else if (
     statement instanceof ast.Import ||
@@ -359,7 +393,8 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
   const symbolOptions = symbols?.get(name) ?? []
 
   // Look from the last to the first definition of this symbol to find the last one.
-  for (const symbol of symbolOptions.reverse()) {
+  for (let i = symbolOptions.length - 1; i >= 0; i--) {
+    const symbol = symbolOptions[i]
     if (symbol?.type !== type) {
       continue
     }
