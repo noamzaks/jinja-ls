@@ -62,6 +62,21 @@ export const collectSymbols = (
       type: "Macro",
       node: statement,
     })
+    const documentation = statement.getDocumentation()
+    const parameterTypes: Record<string, TypeReference> = {}
+
+    const r = new RegExp(
+      "@param\\s*(?:\\{([^\\}]+)\\})?\\s+(\\w+)(?::\\s*(.+))?",
+      "g",
+    )
+    let match: RegExpMatchArray
+    while ((match = r.exec(documentation)) !== null) {
+      const type = match[1] ?? undefined
+      const variable = match[2] ?? undefined
+      const documentation = match[3] ?? undefined
+      parameterTypes[variable] = { type, documentation }
+    }
+
     addSymbol(statement.name.value, {
       type: "Variable",
       node: statement,
@@ -101,6 +116,7 @@ export const collectSymbols = (
           },
         },
         signature: {
+          documentation,
           arguments: statement.args.map(argToArgumentInfo),
           return: "str",
         },
@@ -116,9 +132,9 @@ export const collectSymbols = (
             ? argument
             : (argument as ast.KeywordArgumentExpression).key,
         getType: (document) =>
-          argument instanceof ast.KeywordArgumentExpression
+          (argument instanceof ast.KeywordArgumentExpression
             ? getType(argument.value, document)
-            : undefined,
+            : undefined) ?? parameterTypes[argument.identifierName],
       })
     }
   } else if (statement instanceof ast.Block) {
@@ -165,7 +181,10 @@ export const collectSymbols = (
         type: "Variable",
         node: statement,
         identifierNode: variableIdentifier,
-        getType: (document) => getType(statement.value, document),
+        getType: (document) => ({
+          ...getType(statement.value, document),
+          documentation: statement.getDocumentation(),
+        }),
       })
     }
   } else if (
@@ -199,12 +218,12 @@ export const findImport = async (
   if (!(i.source instanceof ast.StringLiteral)) {
     return []
   }
-  const importPaths = [
+  const importURIs = [
     Utils.joinPath(URI.parse(uri), ".."),
-    ...(configuration?.importPaths?.map((v) => URI.parse(v)) ?? []),
+    ...(configuration?.importURIs?.map((v) => URI.parse(v)) ?? []),
   ]
-  for (const path of importPaths) {
-    const uri = Utils.joinPath(path, i.source.value).toString()
+  for (const baseURI of importURIs) {
+    const uri = Utils.joinPath(baseURI, i.source.value).toString()
     const contents = await readFile(uri)
     if (contents !== undefined) {
       return [uri, contents]

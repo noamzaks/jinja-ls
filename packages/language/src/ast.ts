@@ -7,6 +7,7 @@ export class Node {
     public parent: Node | undefined = undefined,
     public children: Node[] = [],
     public definesScope = false,
+    public parentIndex: number | undefined = undefined,
   ) {}
 
   addChildren(...children: (Node | undefined | null)[]) {
@@ -22,6 +23,7 @@ export class Node {
       this[name] = child
     }
     child.parent = this
+    child.parentIndex = this.children.length
     this.children.push(child)
   }
 
@@ -41,6 +43,33 @@ export class Node {
     if (ends.length !== 0) {
       return Math.min(...ends)
     }
+  }
+
+  getNextSibling(): Node | undefined {
+    if (this.parent !== undefined && this.parentIndex !== undefined) {
+      return this.parent.children[this.parentIndex + 1]
+    }
+  }
+
+  getPreviousSibling(): Node | undefined {
+    if (this.parent !== undefined && this.parentIndex !== undefined) {
+      return this.parent.children[this.parentIndex - 1]
+    }
+  }
+
+  getDocumentation() {
+    let result = ""
+    let sibling = this.getPreviousSibling()
+    while (
+      (sibling instanceof StringLiteral && /[ \t\n]*/.test(sibling.value)) ||
+      sibling instanceof Comment
+    ) {
+      if (sibling instanceof Comment) {
+        result = (sibling.value.trim() + "\n\n" + result).trim()
+      }
+      sibling = sibling.getPreviousSibling()
+    }
+    return result
   }
 }
 

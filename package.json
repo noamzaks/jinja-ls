@@ -74,10 +74,10 @@
     "configuration": {
       "title": "Jinja LS",
       "properties": {
-        "jinjaLS.importPaths": {
+        "jinjaLS.importURIs": {
           "type": "array",
           "default": [],
-          "description": "Additional paths to search for include/import/extends",
+          "description": "Additional URIs to search for include/import/extends, e.g. file://c:/jinja or file://etc/jinja",
           "items": {
             "type": "string"
           }

@@ -779,6 +779,14 @@ connection.onCompletion(async (params) => {
       const symbols = findSymbolsInScope(token.parent, "Variable", document)
       const completions: lsp.CompletionItem[] = []
       for (const [symbolName, [symbol, document]] of symbols.entries()) {
+        if (
+          symbolName === "True" ||
+          symbolName === "False" ||
+          symbolName === "None"
+        ) {
+          continue
+        }
+
         const type = symbol?.getType(document)
         const resolvedType = resolveType(type)
         let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Variable
