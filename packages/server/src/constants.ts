@@ -1032,3 +1032,5 @@ export const BUILTIN_TESTS: Record<string, TypeInfo> = {
     },
   },
 }
+
+export const HOVER_LITERAL_MAX_LENGTH = 20

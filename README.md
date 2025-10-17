@@ -50,9 +50,9 @@ Errors are shown using the awesome [Error Lens](https://marketplace.visualstudio
 
 ## Usage
 
-### Import Paths
+### Import URIs
 
-In VSCode settings you may add directories to "Jinjs LS: Import Paths" to be searched in include/import/from import/extends statements.
+In VSCode settings you may add directorie URIs to "Jinjs LS: Import URIs" to be searched in include/import/from import/extends statements.
 
 ### LS Commands
 

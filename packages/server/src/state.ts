@@ -1,7 +1,9 @@
 import { ast, LexerError } from "@jinja-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
+import { URI } from "vscode-uri"
 import { SymbolInfo } from "./symbols"
 
+export const rootURIs: URI[] = []
 export const documents = new Map<string, TextDocument>()
 export const documentASTs = new Map<
   string,

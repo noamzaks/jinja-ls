@@ -1,5 +1,6 @@
 import { ast } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
+import { documentASTs, documents } from "./state"
 export interface SemanticToken {
   start: number
   end: number
@@ -488,4 +489,27 @@ export const getTokens = (statements: ast.Statement[]) => {
     }
   }
   return items.sort((a, b) => a.start - b.start)
+}
+
+export const getSemanticTokens = (uri: string) => {
+  const document = documents.get(uri)
+  const builder = new lsp.SemanticTokensBuilder()
+  const program = documentASTs.get(uri)?.program
+
+  if (document !== undefined && program !== undefined) {
+    const items = getTokens([program])
+    for (const item of items) {
+      const position = document.positionAt(item.start)
+      builder.push(
+        position.line,
+        position.character,
+        item.end - item.start,
+        item.tokenType,
+        item.tokenModifiers,
+      )
+    }
+  }
+
+  const result = builder.build()
+  return result
 }

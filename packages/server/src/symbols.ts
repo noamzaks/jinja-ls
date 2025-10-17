@@ -10,6 +10,7 @@ import {
   documents,
   documentSymbols,
   globals,
+  rootURIs,
 } from "./state"
 import {
   ArgumentInfo,
@@ -221,6 +222,7 @@ export const findImport = async (
   const importURIs = [
     Utils.joinPath(URI.parse(uri), ".."),
     ...(configuration?.importURIs?.map((v) => URI.parse(v)) ?? []),
+    ...rootURIs,
   ]
   for (const baseURI of importURIs) {
     const uri = Utils.joinPath(baseURI, i.source.value).toString()
