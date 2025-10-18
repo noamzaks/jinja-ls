@@ -303,6 +303,9 @@ export function tokenize(
     // Possibly consume a comment
     if (source[cursorPosition] === "{" && source[cursorPosition + 1] === "#") {
       cursorPosition += 2 // Skip the opening {#
+      if (source[cursorPosition] === "-") {
+        cursorPosition++
+      }
 
       let comment = ""
       while (
@@ -327,6 +330,9 @@ export function tokenize(
       }
       if (cursorPosition + 2 < source.length) {
         cursorPosition += 2 // Skip the closing #}
+      }
+      if (comment[comment.length - 1] === "-") {
+        comment = comment.slice(0, -1)
       }
       tokens.push(createToken(comment, TOKEN_TYPES.Comment))
 

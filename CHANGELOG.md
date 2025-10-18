@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.7] - 2025-10-18
+
+### Added
+
+- Code action to add missing nodes.
+- You can now add custom tests and filters in the configuration.
+- Lists, dicts and tuples now have richer type information.
+- You can add documentation to macros and variables.
+
+### Changed
+
+- The extension now contains modified code instead of depending on jinjahtml-vscode.
+- Imports are now searched in the workspace root(s) as well.
+- The importPaths configuration has been renamed to importURIs.
+
+### Fixed
+
+- Built-in types (mostly from Python) are now more accurate.
+- Symbol resolution is now correctly according to the definition order.
+- Signature help is now shown only inside the function call itself.
+
 ## [0.0.6] - 2025-10-06
 
 ### Added

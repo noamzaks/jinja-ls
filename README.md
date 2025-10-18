@@ -28,9 +28,9 @@ Jinja Language Server is in early development, please report bugs on GitHub!
 - [x] Provide auto-complete for built-in tests and filters and variables
 - [x] Provide an API for other extensions to add globals
 - [x] Support custom import directories
+- [x] Provide documentation for user-defined symbols
 - [ ] Provide format document
 - [ ] Provide document symbols
-- [ ] Provide documentation for user-defined symbols
 - [ ] Support embedded code languages in Markdown (hover, signature help, semantic highlighting, diagnostics)
 - [ ] Make lexer/parser more performant (incremental)
 - [ ] Support custom start/end symbols (instead of `{{, {%, {#`)
@@ -50,9 +50,26 @@ Errors are shown using the awesome [Error Lens](https://marketplace.visualstudio
 
 ## Usage
 
-### Import URIs
+### Configuration
 
-In VSCode settings you may add directorie URIs to "Jinjs LS: Import URIs" to be searched in include/import/from import/extends statements.
+- In VSCode settings you may add directorie URIs to "Jinjs LS: Import URIs" to be searched in include/import/from import/extends statements.
+- You can also define extra tests and filter that are available in your environment.
+
+### Documentation
+
+You can document your custom macros and variables like so:
+
+```jinja
+{# Shows a solution for multiplying x by y. #}
+{# @param {int} x: the first number #}
+{# @param {int} y: the second number #}
+{% macro example(x, y) %}
+I can solve {{ x }} * {{ y }} - it's clearly {{ x * y }}!
+{% endmacro %}
+
+{#- a magical string! -#}
+{% set magic = "hello" %}
+```
 
 ### LS Commands
 
