@@ -14,9 +14,9 @@ def get_types(objects: List[Any]):
         result[typename] = {"name": typename, "properties": {}}
 
         try:
-            for x in s:
-                if type(x) in builtin_types:
-                    result[typename]["elementType"] = type(x).__name__
+            types = {type(x) for x in s}
+            if len(types) == 1 and list(types)[0] in builtin_types:
+                result[typename]["elementType"] = list(types)[0].__name__
         except Exception:
             pass
 
@@ -46,7 +46,12 @@ def get_types(objects: List[Any]):
 
 
 if __name__ == "__main__":
-    builtin_types = get_types(["hello", 1, 1.1, False])
+    print("The generated types have been modified to be more accurate!")
+    exit(0)
+
+    builtin_types = get_types(
+        ["hello", 1, 1.1, False, (1, "2"), [1, "2"], {"1": 2, 2: "1"}]
+    )
     output_file = Path("packages/server/src/builtinTypes.ts")
     output_file.write_text(
         f"""import type {{ TypeInfo }} from "./types"\n\nexport const BUILTIN_TYPES: Record<string, TypeInfo> = {json.dumps(builtin_types)}"""

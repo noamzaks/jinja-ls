@@ -1,6 +1,7 @@
 import { ast, formatExpression } from "@jinja-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { URI, Utils } from "vscode-uri"
+import { BUILTIN_TYPES } from "./builtinTypes"
 import { BUILTIN_FILTERS, BUILTIN_TESTS, SPECIAL_SYMBOLS } from "./constants"
 import {
   configuration,
@@ -123,15 +124,18 @@ export const collectSymbols = (
             name: "tuple",
             documentation:
               "A tuple of the names of arguments the macro accepts.",
-            properties: Object.fromEntries(
-              statement.args.map((arg, index) => [
-                index.toString(),
-                {
-                  type: "str",
-                  literalValue: JSON.stringify(arg.identifierName),
-                },
-              ]),
-            ),
+            properties: {
+              ...Object.fromEntries(
+                statement.args.map((arg, index) => [
+                  index.toString(),
+                  {
+                    type: "str",
+                    literalValue: JSON.stringify(arg.identifierName),
+                  },
+                ]),
+              ),
+              ...BUILTIN_TYPES["tuple"].properties,
+            },
           },
           catch_kwargs: {
             type: "bool",

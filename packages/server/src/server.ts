@@ -80,6 +80,7 @@ connection.onInitialize((params) => {
       definitionProvider: true,
       signatureHelpProvider: {
         triggerCharacters: ["(", ",", "="],
+        retriggerCharacters: [")"],
       },
       completionProvider: {
         triggerCharacters: [".", " "],

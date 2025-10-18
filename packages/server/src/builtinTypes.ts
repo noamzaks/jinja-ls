@@ -421,4 +421,145 @@ export const BUILTIN_TYPES: Record<string, TypeInfo> = {
       },
     },
   },
+  tuple: {
+    name: "tuple",
+    properties: {
+      count: {
+        name: "count",
+        signature: {
+          documentation: "Return number of occurrences of value.",
+          arguments: [{ name: "value" }],
+          return: "int",
+        },
+      },
+      index: {
+        name: "index",
+        signature: {
+          documentation: "Return first index of value.",
+          arguments: [
+            { name: "value" },
+            { name: "start", type: "int", default: "0" },
+            { name: "stop", type: "int", default: "sys.maxsize" },
+          ],
+          return: "int",
+        },
+      },
+    },
+  },
+  list: {
+    name: "list",
+    properties: {
+      append: {
+        name: "append",
+        signature: { documentation: "Append object to the end of the list." },
+      },
+      clear: {
+        name: "clear",
+        signature: { documentation: "Remove all items from list." },
+      },
+      copy: {
+        name: "copy",
+        signature: { documentation: "Return a shallow copy of the list." },
+      },
+      count: {
+        name: "count",
+        signature: { documentation: "Return number of occurrences of value." },
+      },
+      extend: {
+        name: "extend",
+        signature: {
+          documentation: "Extend list by appending elements from the iterable.",
+        },
+      },
+      index: {
+        name: "index",
+        signature: { documentation: "Return first index of value." },
+      },
+      insert: {
+        name: "insert",
+        signature: { documentation: "Insert object before index." },
+      },
+      pop: {
+        name: "pop",
+        signature: {
+          documentation: "Remove and return item at index (default last).",
+        },
+      },
+      remove: {
+        name: "remove",
+        signature: { documentation: "Remove first occurrence of value." },
+      },
+      reverse: {
+        name: "reverse",
+        signature: { documentation: "Reverse *IN PLACE*." },
+      },
+      sort: {
+        name: "sort",
+        signature: {
+          documentation: "Sort the list in ascending order and return None.",
+        },
+      },
+    },
+  },
+  dict: {
+    name: "dict",
+    properties: {
+      clear: {
+        name: "clear",
+        signature: { documentation: "Remove all items from the dict." },
+      },
+      copy: {
+        name: "copy",
+        signature: { documentation: "Return a shallow copy of the dict." },
+      },
+      fromkeys: {
+        name: "fromkeys",
+        signature: {
+          documentation:
+            "Create a new dictionary with keys from iterable and values set to value.",
+        },
+      },
+      get: {
+        name: "get",
+        signature: {
+          documentation:
+            "Return the value for key if key is in the dictionary, else default.",
+        },
+      },
+      items: {
+        name: "items",
+        signature: {
+          documentation:
+            "Return a set-like object providing a view on the dict's items.",
+        },
+      },
+      keys: {
+        name: "keys",
+        signature: {
+          documentation:
+            "Return a set-like object providing a view on the dict's keys.",
+        },
+      },
+      popitem: {
+        name: "popitem",
+        signature: {
+          documentation: "Remove and return a (key, value) pair as a 2-tuple.",
+        },
+      },
+      setdefault: {
+        name: "setdefault",
+        signature: {
+          documentation:
+            "Insert key with a value of default if key is not in the dictionary.",
+        },
+      },
+      values: {
+        name: "values",
+        signature: {
+          documentation:
+            "Return an object providing a view on the dict's values.",
+        },
+      },
+    },
+  },
 }

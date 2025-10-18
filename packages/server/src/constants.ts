@@ -100,12 +100,12 @@ export const SPECIAL_SYMBOLS: Record<
   },
   Macro: {
     varargs: {
-      name: "tuple",
+      type: "tuple",
       documentation:
         "If more positional arguments are passed to the macro than accepted by the macro, they end up in the special varargs variable as a list of values.",
     },
     kwargs: {
-      name: "dict",
+      type: "dict",
       documentation:
         "Like varargs but for keyword arguments. All unconsumed keyword arguments are stored in this special variable.",
     },

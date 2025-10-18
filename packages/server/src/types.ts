@@ -50,7 +50,9 @@ export const resolveType = (
   return type as TypeInfo | undefined
 }
 
-export const getElementType = (types: (TypeInfo | TypeReference)[]) => {
+export const getElementType = (
+  types: (TypeInfo | TypeReference | string)[],
+) => {
   let elementType: TypeInfo | undefined = undefined
   const firstType = resolveType(types[0])
   if (
@@ -83,17 +85,25 @@ export const getType = (
     expression instanceof ast.ArrayLiteral ||
     expression instanceof ast.TupleLiteral
   ) {
-    const properties = Object.fromEntries(
-      expression.value.map((expression, index) => [
-        index.toString(),
-        getType(expression, document),
-      ]),
-    )
+    let properties: Record<string, TypeInfo | TypeReference | string> =
+      Object.fromEntries(
+        expression.value.map((expression, index) => [
+          index.toString(),
+          getType(expression, document),
+        ]),
+      )
+    const elementType = getElementType(Object.values(properties))
+    if (expression.type === "ArrayLiteral") {
+      properties = { ...properties, ...BUILTIN_TYPES["list"].properties }
+    } else {
+      properties = { ...properties, ...BUILTIN_TYPES["tuple"].properties }
+    }
+
     return {
       name: expression.type === "ArrayLiteral" ? "list" : "tuple",
       properties,
       literalValue: formatExpression(expression),
-      elementType: getElementType(Object.values(properties)),
+      elementType,
     }
   } else if (expression instanceof ast.ObjectLiteral) {
     const properties: Record<
@@ -213,7 +223,7 @@ export const stringifySignatureInfo = (s: SignatureInfo) => {
     args.push({ name: "**" + s.kwargs })
   }
   let signature = `(${args.length !== 0 ? args.map(argumentToString).join(", ") : ""})`
-  const returnName = resolveType(s.return)?.name
+  const returnName = s.return ? resolveType(s.return)?.name : "None"
   if (returnName) {
     signature += " -> " + returnName
   }
