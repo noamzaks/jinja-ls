@@ -11,7 +11,12 @@ const SetGlobalsRequest = new lsp.RequestType<
   void
 >("jinja/setGlobals")
 
-export const activate = (context: vscode.ExtensionContext) => {
+export const activate = async (context: vscode.ExtensionContext) => {
+  const htmlExtension = vscode.extensions.getExtension(
+    "vscode.html-language-features",
+  )
+  await htmlExtension?.activate()
+
   const serverModule = context.asAbsolutePath(path.join("dist", "server.js"))
 
   const serverOptions: lsp.ServerOptions = {

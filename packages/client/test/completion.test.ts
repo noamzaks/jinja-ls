@@ -46,7 +46,6 @@ suite("Should provide completions", () => {
         label: "urlize",
         kind: "Function",
       },
-      {},
     ])
 
     expect(
