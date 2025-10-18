@@ -3,6 +3,7 @@ import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { createConnection } from "vscode-languageserver/node"
 import { URI } from "vscode-uri"
+import { getCodeAction } from "./codeAction"
 import { getCompletion } from "./completion"
 import { readFile, registerCustomCommands } from "./customRequests"
 import { getDefinition } from "./definition"
@@ -85,6 +86,7 @@ connection.onInitialize((params) => {
       completionProvider: {
         triggerCharacters: [".", " "],
       },
+      codeActionProvider: true,
     },
   } satisfies lsp.InitializeResult
 })
@@ -188,6 +190,10 @@ connection.onCompletion(async (params) =>
     params.position,
     params.context.triggerCharacter,
   ),
+)
+
+connection.onCodeAction(async (params) =>
+  getCodeAction(params.textDocument.uri, params.context.diagnostics),
 )
 
 registerCustomCommands(connection)
