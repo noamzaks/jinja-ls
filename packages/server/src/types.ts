@@ -67,6 +67,20 @@ export const getElementType = (
   }
 }
 
+export const createTupleType = (
+  properties: Record<string, TypeInfo | TypeReference | string>,
+  literalValue?: string,
+) => {
+  const elementType = getElementType(Object.values(properties))
+
+  return {
+    name: "tuple",
+    properties: { ...properties, ...BUILTIN_TYPES["tuple"].properties },
+    literalValue,
+    elementType,
+  } satisfies TypeInfo
+}
+
 export const getType = (
   expression: ast.Expression | undefined | null,
   document: TextDocument,
@@ -85,7 +99,7 @@ export const getType = (
     expression instanceof ast.ArrayLiteral ||
     expression instanceof ast.TupleLiteral
   ) {
-    let properties: Record<string, TypeInfo | TypeReference | string> =
+    const properties: Record<string, TypeInfo | TypeReference | string> =
       Object.fromEntries(
         expression.value.map((expression, index) => [
           index.toString(),
@@ -94,16 +108,14 @@ export const getType = (
       )
     const elementType = getElementType(Object.values(properties))
     if (expression.type === "ArrayLiteral") {
-      properties = { ...properties, ...BUILTIN_TYPES["list"].properties }
+      return {
+        name: expression.type === "ArrayLiteral" ? "list" : "tuple",
+        properties,
+        literalValue: formatExpression(expression),
+        elementType,
+      }
     } else {
-      properties = { ...properties, ...BUILTIN_TYPES["tuple"].properties }
-    }
-
-    return {
-      name: expression.type === "ArrayLiteral" ? "list" : "tuple",
-      properties,
-      literalValue: formatExpression(expression),
-      elementType,
+      return createTupleType(properties, formatExpression(expression))
     }
   } else if (expression instanceof ast.ObjectLiteral) {
     const properties: Record<
@@ -117,7 +129,7 @@ export const getType = (
     }
     return {
       name: "dict",
-      properties,
+      properties: { ...properties, ...BUILTIN_TYPES["dict"].properties },
       literalValue: formatExpression(expression),
     }
   } else if (expression instanceof ast.MemberExpression) {
@@ -246,22 +258,20 @@ export const getTypeInfoFromJS = (
     const properties = Object.fromEntries(
       value.map((item, index) => [index.toString(), getTypeInfoFromJS(item)]),
     )
-    return {
-      name: "tuple",
-      properties,
-      literalValue: JSON.stringify(value),
-      elementType: getElementType(Object.values(properties)),
-    }
+    return createTupleType(properties, JSON.stringify(value))
   } else if (typeof value === "object") {
     return {
       name: "dict",
       literalValue: JSON.stringify(value),
-      properties: Object.fromEntries(
-        Object.entries(value).map(([key, value]) => [
-          key,
-          getTypeInfoFromJS(value),
-        ]),
-      ),
+      properties: {
+        ...Object.fromEntries(
+          Object.entries(value).map(([key, value]) => [
+            key,
+            getTypeInfoFromJS(value),
+          ]),
+        ),
+        ...BUILTIN_TYPES["dict"].properties,
+      },
     }
   }
 }
