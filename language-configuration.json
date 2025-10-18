@@ -109,8 +109,8 @@
     ],
     "folding": {
         "markers": {
-            "start": "{%[-+]?\\s*(block|filter|for|if|macro|raw)",
-            "end": "{%[-+]?\\s*end(block|filter|for|if|macro|raw)\\s*[-+]?%}"
+            "start": "{%[-+]?\\s*(set|block|filter|for|call|if|macro|with|raw)",
+            "end": "{%[-+]?\\s*end(set|block|filter|for|call|if|macro|with|raw)(?:\\s+\\w+)?\\s*[-+]?%}"
         }
     }
 }
