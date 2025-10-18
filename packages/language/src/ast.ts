@@ -74,10 +74,9 @@ export class Node {
 }
 
 export class TokenNode extends Node {
-  override type = "TokenNode"
-
   constructor(public token: Token) {
     super()
+    this.type = token.type
   }
 
   get value() {
@@ -137,7 +136,7 @@ export class MissingNode extends ErrorNode {
 
   constructor(
     public missingType: string,
-    public before: Token,
+    public offset: number,
   ) {
     super()
   }
@@ -148,9 +147,10 @@ export class UnexpectedToken extends ErrorNode {
 
   constructor(
     public message: string,
-    public token: Token,
+    public token: TokenNode,
   ) {
     super()
+    this.addChildren(token)
   }
 }
 

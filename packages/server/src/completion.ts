@@ -1,5 +1,6 @@
 import { ast } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
+import { BUILTIN_STATEMENTS } from "./constants"
 import { documentASTs, documents, getFilters, getTests } from "./state"
 import { findSymbolsInScope } from "./symbols"
 import { getType, resolveType, stringifySignatureInfo } from "./types"
@@ -20,6 +21,7 @@ export const getCompletion = async (
     const lastLine = text.slice(text.lastIndexOf("\n") + 1)
     if (
       !(
+        text.endsWith("{%") ||
         text.endsWith("{{") ||
         text.endsWith("|") ||
         text.endsWith("is") ||
@@ -39,9 +41,25 @@ export const getCompletion = async (
     }
 
     if (
+      (token.parent instanceof ast.UnexpectedToken &&
+        token.parent.message.startsWith("Unexpected statement")) ||
+      (token.parent instanceof ast.MissingNode &&
+        token.parent.missingType === "statement name")
+    ) {
+      return BUILTIN_STATEMENTS.map(
+        (statement) =>
+          ({
+            label: statement,
+            kind: lsp.CompletionItemKind.Keyword,
+            insertText: statement + " ",
+          }) satisfies lsp.CompletionItem,
+      )
+    }
+
+    if (
       (token.parent?.parent instanceof ast.TestExpression &&
         token.parent.parent.test === token.parent) ||
-      (token.value === "is" &&
+      ((token.value === "is" || token.type === "CloseExpression") &&
         token.parent instanceof ast.TestExpression &&
         token.parent.test instanceof ast.Identifier &&
         token.parent.test.value === "error")

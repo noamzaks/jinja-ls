@@ -161,9 +161,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{% %}",
     errors: [
       {
-        before: {
-          start: 3,
-        },
+        offset: 3,
         missingType: "statement name",
         type: "MissingNode",
       },
@@ -173,9 +171,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{% if %}{% endif %}",
     errors: [
       {
-        before: {
-          start: 6,
-        },
+        offset: 6,
         type: "MissingNode",
         missingType: "expression",
       },
@@ -185,9 +181,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{% if true %}wow",
     errors: [
       {
-        before: {
-          end: 16,
-        },
+        offset: 16,
         type: "MissingNode",
         missingType: "'{% endif %}'",
       },
@@ -197,9 +191,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{% macro test() %}wow",
     errors: [
       {
-        before: {
-          end: 21,
-        },
+        offset: 21,
         type: "MissingNode",
         missingType: "'{% endmacro %}'",
       },
@@ -209,9 +201,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{% for x in [] %}wow",
     errors: [
       {
-        before: {
-          end: 20,
-        },
+        offset: 20,
         type: "MissingNode",
         missingType: "'{% endfor %}'",
       },
@@ -221,9 +211,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{% call test() %}wow",
     errors: [
       {
-        before: {
-          end: 20,
-        },
+        offset: 20,
         type: "MissingNode",
         missingType: "'{% endcall %}'",
       },
@@ -233,9 +221,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{% filter upper %}wow",
     errors: [
       {
-        before: {
-          end: 21,
-        },
+        offset: 21,
         type: "MissingNode",
         missingType: "'{% endfilter %}'",
       },
@@ -245,9 +231,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{% raw %}wow",
     errors: [
       {
-        before: {
-          end: 12,
-        },
+        offset: 12,
         type: "MissingNode",
         missingType: "'{% endraw %}'",
       },
@@ -257,9 +241,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{% macro %}",
     errors: [
       {
-        before: {
-          start: 9,
-        },
+        offset: 9,
         type: "MissingNode",
         missingType: "macro name",
       },
@@ -269,9 +251,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{% macro [] %}",
     errors: [
       {
-        before: {
-          start: 9,
-        },
+        offset: 9,
         type: "MissingNode",
         missingType: "macro name",
       },
@@ -281,9 +261,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{% call %}",
     errors: [
       {
-        before: {
-          start: 8,
-        },
+        offset: 8,
         type: "MissingNode",
         missingType: "identifier for callee",
       },
@@ -293,9 +271,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{% call 1574 %}",
     errors: [
       {
-        before: {
-          start: 8,
-        },
+        offset: 8,
         type: "MissingNode",
         missingType: "identifier for callee",
       },
@@ -305,9 +281,7 @@ const PARSER_ERRORS = Object.freeze({
     text: '{% from "test.j2" import %}',
     errors: [
       {
-        before: {
-          start: 25,
-        },
+        offset: 25,
         type: "MissingNode",
         missingType: "identifier to import",
       },
@@ -317,9 +291,7 @@ const PARSER_ERRORS = Object.freeze({
     text: '{% from "test.j2" import "" %}',
     errors: [
       {
-        before: {
-          start: 25,
-        },
+        offset: 25,
         type: "MissingNode",
         missingType: "identifier to import",
       },
@@ -329,9 +301,7 @@ const PARSER_ERRORS = Object.freeze({
     text: '{% from "test.j2" import a as b, "" as c %}',
     errors: [
       {
-        before: {
-          start: 33,
-        },
+        offset: 33,
         type: "MissingNode",
         missingType: "identifier to import",
       },
@@ -341,9 +311,7 @@ const PARSER_ERRORS = Object.freeze({
     text: '{% from "test.j2" import a as %}',
     errors: [
       {
-        before: {
-          start: 30,
-        },
+        offset: 30,
         type: "MissingNode",
         missingType: "identifier for imported name",
       },
@@ -353,9 +321,7 @@ const PARSER_ERRORS = Object.freeze({
     text: '{% from "test.j2" import a as [] %}',
     errors: [
       {
-        before: {
-          start: 30,
-        },
+        offset: 30,
         type: "MissingNode",
         missingType: "identifier for imported name",
       },
@@ -378,9 +344,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{% for in [] %}",
     errors: [
       {
-        before: {
-          start: 7,
-        },
+        offset: 7,
         type: "MissingNode",
         missingType: "identifier/tuple for the loop variable",
       },
@@ -390,9 +354,7 @@ const PARSER_ERRORS = Object.freeze({
     text: '{% for "" in [] %}',
     errors: [
       {
-        before: {
-          start: 7,
-        },
+        offset: 7,
         type: "MissingNode",
         missingType: "identifier/tuple for the loop variable",
       },
@@ -402,9 +364,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{% for x [] %}{% endfor %}",
     errors: [
       {
-        before: {
-          start: 9,
-        },
+        offset: 9,
         type: "MissingNode",
         missingType: "'in' keyword following loop variable",
       },
@@ -414,9 +374,7 @@ const PARSER_ERRORS = Object.freeze({
     text: '{{ f("x"=2) }}',
     errors: [
       {
-        before: {
-          start: 5,
-        },
+        offset: 5,
         type: "MissingNode",
         missingType: "identifier for keyword argument",
       },
@@ -426,9 +384,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{{ x[] }}",
     errors: [
       {
-        before: {
-          start: 5,
-        },
+        offset: 5,
         type: "MissingNode",
         missingType: "at least one argument for member/slice expression",
       },
@@ -438,9 +394,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{{ x[1:1:1:1] }}",
     errors: [
       {
-        before: {
-          start: 12,
-        },
+        offset: 12,
         type: "MissingNode",
         missingType: "at most three argument for slice expression",
       },
@@ -450,9 +404,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{{ x. }}",
     errors: [
       {
-        before: {
-          start: 6,
-        },
+        offset: 6,
         type: "MissingNode",
         missingType: "identifier for member expression",
       },
@@ -462,9 +414,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{{ x.[] }}",
     errors: [
       {
-        before: {
-          start: 5,
-        },
+        offset: 5,
         type: "MissingNode",
         missingType: "identifier for member expression",
       },
@@ -474,9 +424,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{{ x is }}",
     errors: [
       {
-        before: {
-          start: 8,
-        },
+        offset: 8,
         type: "MissingNode",
         missingType: "identifier for the test",
       },
@@ -486,9 +434,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{{ x is [] }}",
     errors: [
       {
-        before: {
-          start: 8,
-        },
+        offset: 8,
         type: "MissingNode",
         missingType: "identifier for the test",
       },
@@ -498,9 +444,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{{ x | }}",
     errors: [
       {
-        before: {
-          start: 7,
-        },
+        offset: 7,
         type: "MissingNode",
         missingType: "identifier for the filter",
       },
@@ -510,9 +454,7 @@ const PARSER_ERRORS = Object.freeze({
     text: "{{ x | [] }}",
     errors: [
       {
-        before: {
-          start: 7,
-        },
+        offset: 7,
         type: "MissingNode",
         missingType: "identifier for the filter",
       },

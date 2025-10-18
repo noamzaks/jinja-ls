@@ -1033,4 +1033,34 @@ export const BUILTIN_TESTS: Record<string, TypeInfo> = {
   },
 }
 
+export const BUILTIN_STATEMENTS = [
+  "raw",
+  "block",
+  "include",
+  "from",
+  "import",
+  "extends",
+  "set",
+  "if",
+  "elif",
+  "else",
+  "macro",
+  "for",
+  "call",
+  "do",
+  "with",
+  "break",
+  "continue",
+  "filter",
+  "endraw",
+  "endblock",
+  "endset",
+  "endif",
+  "endmacro",
+  "endfor",
+  "endcall",
+  "endwith",
+  "endfilter",
+]
+
 export const HOVER_LITERAL_MAX_LENGTH = 20

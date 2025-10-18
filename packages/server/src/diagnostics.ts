@@ -13,7 +13,7 @@ export const getDiagnostics = (uri: string) => {
   if (document !== undefined) {
     for (const e of parserErrors ?? []) {
       if (e instanceof ast.MissingNode) {
-        const position = document.positionAt(e.before.start)
+        const position = document.positionAt(e.offset)
         items.push({
           message: `Expected ${e.missingType}`,
           range: lsp.Range.create(position, position),
