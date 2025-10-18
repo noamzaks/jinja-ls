@@ -67,7 +67,7 @@
   "contributes": {
     "commands": [
       {
-        "command": "jinja-ls.restart",
+        "command": "jinjaLS.restart",
         "title": "Jinja LS: Restart Server"
       }
     ],
@@ -75,11 +75,106 @@
       "title": "Jinja LS",
       "properties": {
         "jinjaLS.importURIs": {
-          "type": "array",
-          "default": [],
           "description": "Additional URIs to search for include/import/extends, e.g. file://c:/jinja or file://etc/jinja",
+          "type": "array",
           "items": {
             "type": "string"
+          }
+        },
+        "jinjaLS.extraTests": {
+          "description": "Additional tests that are defined in the environment",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "signature": {
+                "type": "object",
+                "properties": {
+                  "documentation": {
+                    "type": "string"
+                  },
+                  "arguments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "default": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "name"
+                      ]
+                    }
+                  },
+                  "return": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name"
+            ]
+          }
+        },
+        "jinjaLS.extraFilters": {
+          "description": "Additional filters that are defined in the environment",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "signature": {
+                "type": "object",
+                "properties": {
+                  "documentation": {
+                    "type": "string"
+                  },
+                  "arguments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "default": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "name"
+                      ]
+                    }
+                  },
+                  "return": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name"
+            ]
           }
         }
       }

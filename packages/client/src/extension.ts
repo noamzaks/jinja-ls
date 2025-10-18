@@ -74,7 +74,7 @@ export const activate = (context: vscode.ExtensionContext) => {
   client.start()
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("jinja-ls.restart", () => client.restart()),
+    vscode.commands.registerCommand("jinjaLS.restart", () => client.restart()),
     vscode.commands.registerCommand(
       "jinja-ls.setGlobals",
       (globals: Record<string, unknown>, uri?: string, merge = true) =>

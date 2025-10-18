@@ -2,7 +2,7 @@ import { ast, formatExpression } from "@jinja-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { URI, Utils } from "vscode-uri"
 import { BUILTIN_TYPES } from "./builtinTypes"
-import { BUILTIN_FILTERS, BUILTIN_TESTS, SPECIAL_SYMBOLS } from "./constants"
+import { SPECIAL_SYMBOLS } from "./constants"
 import {
   configuration,
   documentASTs,
@@ -10,6 +10,8 @@ import {
   documentImports,
   documents,
   documentSymbols,
+  getFilters,
+  getTests,
   globals,
   rootURIs,
 } from "./state"
@@ -371,7 +373,7 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
       return {
         type: "Variable",
         node: inScopeOf,
-        getType: () => BUILTIN_TESTS[inScopeOf.value],
+        getType: () => getTests()[inScopeOf.value],
       } as SymbolInfo as Extract<SymbolInfo, { type: K }>
     }
 
@@ -389,7 +391,7 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
       return {
         type: "Variable",
         node: inScopeOf,
-        getType: () => BUILTIN_FILTERS[inScopeOf.value],
+        getType: () => getFilters()[inScopeOf.value],
       } as SymbolInfo as Extract<SymbolInfo, { type: K }>
     }
   }

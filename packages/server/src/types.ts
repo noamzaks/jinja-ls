@@ -1,7 +1,7 @@
 import { ast, formatExpression } from "@jinja-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { BUILTIN_TYPES } from "./builtinTypes"
-import { BUILTIN_FILTERS } from "./constants"
+import { getFilters } from "./state"
 import { findSymbol } from "./symbols"
 
 export interface ArgumentInfo {
@@ -194,7 +194,7 @@ export const getType = (
     }
   } else if (expression instanceof ast.FilterExpression) {
     return resolveType(
-      BUILTIN_FILTERS[expression.filter.identifierName]?.signature?.return,
+      getFilters()[expression.filter.identifierName]?.signature?.return,
     )
   } else if (expression instanceof ast.TestExpression) {
     return resolveType("bool")

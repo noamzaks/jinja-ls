@@ -1,7 +1,6 @@
 import { ast } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
-import { BUILTIN_FILTERS, BUILTIN_TESTS } from "./constants"
-import { documentASTs, documents } from "./state"
+import { documentASTs, documents, getFilters, getTests } from "./state"
 import { findSymbolsInScope } from "./symbols"
 import { getType, resolveType, stringifySignatureInfo } from "./types"
 import { parentOfType, tokenAt } from "./utilities"
@@ -47,14 +46,14 @@ export const getCompletion = async (
         token.parent.test instanceof ast.Identifier &&
         token.parent.test.value === "error")
     ) {
-      return Object.entries(BUILTIN_TESTS)
+      return Object.entries(getTests())
         .filter(([testName]) => /\w/.test(testName))
         .map(
           ([testName, test]) =>
             ({
               label: testName,
               kind: lsp.CompletionItemKind.Function,
-              documentation: test.signature.documentation,
+              documentation: test?.signature?.documentation,
             }) satisfies lsp.CompletionItem,
         )
     }
@@ -70,12 +69,12 @@ export const getCompletion = async (
           token.parent.filter.value === "error") ||
           token.parent.filter instanceof ast.MissingNode))
     ) {
-      return Object.entries(BUILTIN_FILTERS).map(
+      return Object.entries(getFilters()).map(
         ([filterName, filter]) =>
           ({
             label: filterName,
             kind: lsp.CompletionItemKind.Function,
-            documentation: filter.signature.documentation,
+            documentation: filter?.signature?.documentation,
           }) satisfies lsp.CompletionItem,
       )
     }
