@@ -49,6 +49,24 @@ export const argToArgumentInfo = (arg: ast.Expression): ArgumentInfo => {
   return { name: kwarg.identifierName, default: formatExpression(kwarg.value) }
 }
 
+export const getParametersFromDocumentation = (documentation: string) => {
+  const parameterTypes: Record<string, TypeReference> = {}
+
+  const r = new RegExp(
+    "@param\\s*(?:\\{([^\\}]+)\\})?\\s+(\\w+)(?::\\s*(.+))?",
+    "g",
+  )
+  let match: RegExpMatchArray
+  while ((match = r.exec(documentation)) !== null) {
+    const type = match[1] ?? undefined
+    const variable = match[2] ?? undefined
+    const documentation = match[3] ?? undefined
+    parameterTypes[variable] = { type, documentation }
+  }
+
+  return parameterTypes
+}
+
 export const collectSymbols = (
   statement: ast.Node,
   result: Map<string, SymbolInfo[]>,
@@ -100,19 +118,7 @@ export const collectSymbols = (
       node: statement,
     })
     const documentation = statement.getDocumentation()
-    const parameterTypes: Record<string, TypeReference> = {}
-
-    const r = new RegExp(
-      "@param\\s*(?:\\{([^\\}]+)\\})?\\s+(\\w+)(?::\\s*(.+))?",
-      "g",
-    )
-    let match: RegExpMatchArray
-    while ((match = r.exec(documentation)) !== null) {
-      const type = match[1] ?? undefined
-      const variable = match[2] ?? undefined
-      const documentation = match[3] ?? undefined
-      parameterTypes[variable] = { type, documentation }
-    }
+    const parameterTypes = getParametersFromDocumentation(documentation)
 
     addSymbol(statement.name.value, {
       type: "Variable",
@@ -214,12 +220,40 @@ export const collectSymbols = (
       })
     }
   } else if (statement instanceof ast.SetStatement) {
-    addSymbolsFromAssignment(
-      statement.assignee,
-      statement.value,
-      statement,
-      statement.getDocumentation(),
-    )
+    if (statement.value !== null) {
+      addSymbolsFromAssignment(
+        statement.assignee,
+        statement.value,
+        statement,
+        statement.getDocumentation(),
+      )
+    } else if (statement.assignee instanceof ast.Identifier) {
+      addSymbol(statement.assignee.value, {
+        type: "Variable",
+        node: statement,
+        identifierNode: statement.assignee,
+        getType: () => ({
+          ...resolveType("str"),
+          documentation: statement.getDocumentation(),
+        }),
+      })
+    } else if (statement.assignee instanceof ast.FilterExpression) {
+      let current = statement.assignee.operand
+      while (current instanceof ast.FilterExpression) {
+        current = current.operand
+      }
+      if (current instanceof ast.Identifier) {
+        addSymbol(current.value, {
+          type: "Variable",
+          node: statement,
+          identifierNode: current,
+          getType: (document) => ({
+            ...getType(statement.assignee, document),
+            documentation: statement.getDocumentation(),
+          }),
+        })
+      }
+    }
   } else if (statement instanceof ast.With) {
     for (const assignment of statement.assignments) {
       addSymbolsFromAssignment(
@@ -227,6 +261,20 @@ export const collectSymbols = (
         assignment.value,
         assignment.assignee,
       )
+    }
+  } else if (statement instanceof ast.CallStatement) {
+    const documentation = statement.getDocumentation()
+    const parameterTypes = getParametersFromDocumentation(documentation)
+    for (let i = 0; i < statement.callerArgs.length; i++) {
+      const arg = statement.callerArgs[i]
+      if (arg instanceof ast.Identifier) {
+        addSymbol(arg.value, {
+          type: "Variable",
+          node: statement.call,
+          identifierNode: arg,
+          getType: () => parameterTypes[arg.value],
+        })
+      }
     }
   } else if (
     statement instanceof ast.Import ||

@@ -36,9 +36,11 @@ export const getCompletion = async (
   if (tokens !== undefined && document !== undefined) {
     const offset = document.offsetAt(position)
     const token = tokenAt(tokens, offset)
-    if (!token) {
+    if (!token || token.type === "Text") {
       return
     }
+
+    const block = parentOfType(token, "Block") as ast.Block | undefined
 
     if (
       (token.parent instanceof ast.UnexpectedToken &&
@@ -54,9 +56,7 @@ export const getCompletion = async (
             insertText: statement + " ",
           }) satisfies lsp.CompletionItem,
       )
-    }
-
-    if (
+    } else if (
       (token.parent?.parent instanceof ast.TestExpression &&
         token.parent.parent.test === token.parent) ||
       ((token.value === "is" || token.type === "CloseExpression") &&
@@ -74,9 +74,7 @@ export const getCompletion = async (
               documentation: test?.signature?.documentation,
             }) satisfies lsp.CompletionItem,
         )
-    }
-
-    if (
+    } else if (
       (token.parent instanceof ast.Identifier &&
         (token.parent.parent instanceof ast.FilterExpression ||
           token.parent.parent instanceof ast.FilterStatement) &&
@@ -95,10 +93,7 @@ export const getCompletion = async (
             documentation: filter?.signature?.documentation,
           }) satisfies lsp.CompletionItem,
       )
-    }
-
-    const block = parentOfType(token, "Block") as ast.Block | undefined
-    if (
+    } else if (
       (token.parent instanceof ast.Identifier &&
         token.parent.parent instanceof ast.Block &&
         token.parent.parent.name === token.parent) ||
@@ -109,9 +104,7 @@ export const getCompletion = async (
         label: symbolName,
         kind: lsp.CompletionItemKind.Function,
       }))
-    }
-
-    if (token.parent instanceof ast.MemberExpression) {
+    } else if (token.parent instanceof ast.MemberExpression) {
       const object = token.parent.object
       const symbolType = getType(object, document)
       const resolvedType = resolveType(symbolType)
@@ -151,9 +144,7 @@ export const getCompletion = async (
         }
         return completions
       }
-    }
-
-    if (token.parent !== undefined) {
+    } else if (token.parent !== undefined) {
       const symbols = findSymbolsInScope(token.parent, "Variable", document)
       const completions: lsp.CompletionItem[] = []
       for (const [symbolName, [symbol, document]] of symbols.entries()) {

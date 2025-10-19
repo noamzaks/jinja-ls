@@ -210,7 +210,7 @@ export function parse(
 
     // next token must be Identifier whose .value tells us which statement
     if (tokens[current]?.type !== TOKEN_TYPES.Identifier) {
-      const result = createMissingNode("statement name", tokens[current].start)
+      const result = createMissingNode("statement name", tokens[current]?.start)
       eatUntil(TOKEN_TYPES.CloseStatement, "'%}'")
       return result
     }
@@ -279,7 +279,7 @@ export function parse(
         if (callee.type !== "Identifier") {
           const missingNode = createMissingNode(
             "identifier for callee",
-            tokens[calleeStart].start,
+            tokens[calleeStart]?.start,
             callee,
           )
           eatUntil(TOKEN_TYPES.CloseStatement, "'%}'")
@@ -1127,6 +1127,14 @@ export function parse(
         test = parseCallExpression(test)
       }
 
+      const beforeArgument = current
+      const argument = parsePrimaryExpression(true)
+      if (!(argument instanceof MissingNode)) {
+        test = new CallExpression(test, [argument])
+      } else {
+        current = beforeArgument
+      }
+
       operand = new TestExpression(
         operand,
         negate,
@@ -1167,7 +1175,7 @@ export function parse(
   }
 
   const primaryExpressionMissingNodes = new Set<number>()
-  function parsePrimaryExpression(): Statement {
+  function parsePrimaryExpression(ignoreFailure = false): Statement {
     // Primary expression: number, string, identifier, function call, parenthesized expression
     const token = current >= tokens.length ? undefined : tokens[current++]
     switch (token?.type) {
@@ -1228,7 +1236,9 @@ export function parse(
         primaryExpressionMissingNodes.add(current)
         if (!alreadyCreated) {
           current--
-          return createMissingNode("expression", token.start)
+          if (!ignoreFailure) {
+            return createMissingNode("expression", token.start)
+          }
         }
         return new MissingNode("expression", token?.start)
     }

@@ -72,6 +72,31 @@ export const SPECIAL_SYMBOLS: Record<
       signature: {
         documentation:
           "Cycle through values by yield them one at a time, then restarting once the end is reached.",
+        args: "items",
+        return: {
+          name: "cycler",
+          properties: {
+            current: {
+              name: "Any",
+              documentation:
+                "Return the current item. Equivalent to the item that will be returned next time next() is called.",
+            },
+            next: {
+              name: "function",
+              signature: {
+                documentation:
+                  "Return the current item, then advance current to the next item.",
+                return: { name: "Any" },
+              },
+            },
+            reset: {
+              name: "function",
+              signature: {
+                documentation: "Resets the current item to the first item.",
+              },
+            },
+          },
+        },
       },
     },
     joiner: {
@@ -94,6 +119,8 @@ export const SPECIAL_SYMBOLS: Record<
       signature: {
         documentation:
           "A namespace object that can hold arbitrary attributes.  It may be initialized from a dictionary or with keyword arguments.",
+        args: "args",
+        kwargs: "kwargs",
         return: "namespace",
       },
     },

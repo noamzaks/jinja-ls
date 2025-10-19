@@ -110,7 +110,7 @@ export const getType = (
     if (expression.type === "ArrayLiteral") {
       return {
         name: expression.type === "ArrayLiteral" ? "list" : "tuple",
-        properties,
+        properties: { ...properties, ...BUILTIN_TYPES["list"].properties },
         literalValue: formatExpression(expression),
         elementType,
       }
@@ -133,12 +133,12 @@ export const getType = (
       literalValue: formatExpression(expression),
     }
   } else if (expression instanceof ast.MemberExpression) {
+    const objectType = resolveType(getType(expression.object, document))
     if (
       expression.property instanceof ast.StringLiteral ||
       expression.property instanceof ast.Identifier ||
       expression.property instanceof ast.IntegerLiteral
     ) {
-      const objectType = resolveType(getType(expression.object, document))
       let propertyName = expression.property.value
       if (typeof propertyName === "number" && propertyName < 0) {
         propertyName =
@@ -150,6 +150,18 @@ export const getType = (
           return resolveType(memberType)
         }
         return memberType
+      }
+    } else if (expression.property instanceof ast.SliceExpression) {
+      return {
+        name: objectType.name,
+        documentation: objectType.documentation,
+        elementType: objectType.elementType,
+        signature: objectType.signature,
+        properties: Object.fromEntries(
+          Object.entries(objectType.properties).filter(([x]) =>
+            isNaN(parseInt(x, 10)),
+          ),
+        ),
       }
     }
   } else if (expression instanceof ast.CallExpression) {
@@ -196,8 +208,16 @@ export const getType = (
     return resolveType(
       getFilters()[expression.filter.identifierName]?.signature?.return,
     )
+  } else if (expression instanceof ast.Ternary) {
+    const trueType = getType(expression.trueExpr, document)
+    const falseType = getType(expression.falseExpr, document)
+    if (resolveType(trueType)?.name === resolveType(falseType)?.name) {
+      return { ...trueType, literalValue: undefined }
+    }
   } else if (expression instanceof ast.TestExpression) {
     return resolveType("bool")
+  } else if (expression instanceof ast.SelectExpression) {
+    return getType(expression.lhs, document)
   } else if (expression instanceof ast.Identifier) {
     const [symbol, symbolDocument] = findSymbol(
       document,

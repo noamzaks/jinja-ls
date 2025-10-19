@@ -129,7 +129,11 @@ export const getHover = async (uri: string, position: lsp.Position) => {
         if (resolvedType.signature !== undefined) {
           value = stringifySignatureInfo(resolvedType.signature)
         } else {
-          value = `${identifier.value}: ${resolvedType.name}`
+          value = identifier.value
+          if (resolvedType?.name) {
+            value += `: ${resolvedType.name}`
+          }
+
           if (nodeType.literalValue !== undefined) {
             value += ` = ${nodeType.literalValue.length < HOVER_LITERAL_MAX_LENGTH ? nodeType.literalValue : "..."}`
           }
