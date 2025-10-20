@@ -8,6 +8,7 @@ import { getCompletion } from "./completion"
 import { readFile, registerCustomCommands } from "./customRequests"
 import { getDefinition } from "./definition"
 import { getDiagnostics } from "./diagnostics"
+import { getDocumentLinks } from "./documentLinks"
 import { getHover } from "./hover"
 import { processLSCommand } from "./lsCommands"
 import { getSemanticTokens, legend } from "./semantic"
@@ -87,6 +88,9 @@ connection.onInitialize((params) => {
         triggerCharacters: [".", " "],
       },
       codeActionProvider: true,
+      documentLinkProvider: {
+        resolveProvider: false,
+      },
     },
   } satisfies lsp.InitializeResult
 })
@@ -194,6 +198,10 @@ connection.onCompletion(async (params) =>
 
 connection.onCodeAction(async (params) =>
   getCodeAction(params.textDocument.uri, params.context.diagnostics),
+)
+
+connection.onDocumentLinks(async (params) =>
+  getDocumentLinks(params.textDocument.uri),
 )
 
 registerCustomCommands(connection)

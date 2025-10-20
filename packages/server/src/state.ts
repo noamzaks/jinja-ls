@@ -18,7 +18,10 @@ export const documentASTs = new Map<
 >()
 export const documentImports = new Map<
   string,
-  [ast.Include | ast.Import | ast.FromImport | ast.Extends, string][]
+  [
+    ast.Include | ast.Import | ast.FromImport | ast.Extends,
+    string | undefined,
+  ][]
 >()
 export const documentSymbols = new Map<string, Map<string, SymbolInfo[]>>()
 export const globals: Record<string, unknown> = {}

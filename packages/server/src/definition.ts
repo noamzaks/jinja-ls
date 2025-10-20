@@ -43,44 +43,6 @@ export const getDefinition = async (uri: string, position: lsp.Position) => {
       }
     }
 
-    const includeExpression =
-      (parentOfType(token, "Include") as ast.Include | undefined) ||
-      (parentOfType(token, "Import") as ast.Import | undefined) ||
-      (parentOfType(token, "FromImport") as ast.FromImport | undefined) ||
-      (parentOfType(token, "Extends") as ast.Extends | undefined)
-
-    if (
-      includeExpression !== undefined &&
-      includeExpression.source instanceof ast.StringLiteral
-    ) {
-      const uri = (imports.find((i) => i[0] === includeExpression) ?? [])[1]
-
-      if (uri === undefined) {
-        return
-      }
-
-      const sourceLiteral = includeExpression.source as ast.StringLiteral
-      return [
-        lsp.LocationLink.create(
-          uri,
-          lsp.Range.create(
-            lsp.Position.create(0, 0),
-            lsp.Position.create(0, 0),
-          ),
-          lsp.Range.create(
-            lsp.Position.create(0, 0),
-            lsp.Position.create(0, 0),
-          ),
-          lsp.Range.create(
-            document.positionAt(sourceLiteral.tokens[0].start),
-            document.positionAt(
-              sourceLiteral.tokens[sourceLiteral.tokens.length - 1].end,
-            ),
-          ),
-        ),
-      ]
-    }
-
     const blockStatement = parentOfType(token, "Block") as ast.Block | undefined
 
     if (

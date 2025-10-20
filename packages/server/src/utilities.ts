@@ -1,4 +1,6 @@
 import { ast } from "@jinja-ls/language"
+import * as lsp from "vscode-languageserver"
+import { TextDocument } from "vscode-languageserver-textdocument"
 
 export const walk = (
   program: ast.Program,
@@ -37,4 +39,11 @@ export const parentOfType = (node: ast.Node | undefined, type: string) => {
     }
     node = node.parent
   }
+}
+
+export const rangeOf = (document: TextDocument, node: ast.Node) => {
+  return lsp.Range.create(
+    document.positionAt(node.getStart()),
+    document.positionAt(node.getEnd()),
+  )
 }
