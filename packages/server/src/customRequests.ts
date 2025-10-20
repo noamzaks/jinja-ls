@@ -9,11 +9,23 @@ export const ReadFileRequest = new lsp.RequestType<
   void
 >("jinja/readFile")
 
+export const ListDirectoriesRequest = new lsp.RequestType<
+  { uris: string[] },
+  string[],
+  void
+>("jinja/listDirectories")
+
 export const readFile = async (
   connection: lsp.Connection,
   uri: string,
 ): Promise<string | undefined> =>
   (await connection.sendRequest(ReadFileRequest, { uri }))?.contents
+
+export const listDirectories = async (
+  connection: lsp.Connection,
+  uris: string[],
+): Promise<string[]> =>
+  await connection.sendRequest(ListDirectoriesRequest, { uris })
 
 // Requests from the server
 

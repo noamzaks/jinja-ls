@@ -660,7 +660,16 @@
     "configuration": {
       "title": "Jinja LS",
       "properties": {
+        "jinjaLS.extraFileExtensions": {
+          "title": "Extra File Extensions",
+          "description": "Extra file extension to match as Jinja for import completions",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "jinjaLS.importURIs": {
+          "title": "Import URIs",
           "description": "Additional URIs to search for include/import/extends, e.g. file://c:/jinja or file://etc/jinja",
           "type": "array",
           "items": {
@@ -668,6 +677,7 @@
           }
         },
         "jinjaLS.extraTests": {
+          "title": "Extra Tests",
           "description": "Additional tests that are defined in the environment",
           "type": "object",
           "additionalProperties": {
@@ -716,6 +726,7 @@
           }
         },
         "jinjaLS.extraFilters": {
+          "title": "Extra Filters",
           "description": "Additional filters that are defined in the environment",
           "type": "object",
           "additionalProperties": {

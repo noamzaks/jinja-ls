@@ -30,6 +30,7 @@ export const configuration: {
   importURIs?: string[] | undefined
   extraTests?: Record<string, TypeInfo>
   extraFilters?: Record<string, TypeInfo>
+  extraFileExtensions?: string[]
   initialized: boolean
 } = { initialized: false }
 

@@ -76,6 +76,31 @@ export const activate = async (context: vscode.ExtensionContext) => {
     }
   })
 
+  client.onRequest(
+    "jinja/listDirectories",
+    async ({ uris }: { uris: string[] }) => {
+      try {
+        const result = []
+        for (const uri of uris) {
+          const parsed = vscode.Uri.parse(uri)
+          try {
+            const items = await vscode.workspace.fs.readDirectory(parsed)
+            for (const [item, itemKind] of items) {
+              result.push(
+                itemKind === vscode.FileType.Directory ? item + "/" : item,
+              )
+            }
+          } catch {
+            // Ignored
+          }
+        }
+        return result
+      } catch {
+        return []
+      }
+    },
+  )
+
   client.start()
 
   context.subscriptions.push(

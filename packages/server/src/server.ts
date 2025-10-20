@@ -85,7 +85,7 @@ connection.onInitialize((params) => {
         retriggerCharacters: [")"],
       },
       completionProvider: {
-        triggerCharacters: [".", " "],
+        triggerCharacters: [".", " ", '"', "/"],
       },
       codeActionProvider: true,
       documentLinkProvider: {
@@ -188,12 +188,14 @@ connection.onSignatureHelp(async (params) =>
   getSignatureHelp(params.textDocument.uri, params.position),
 )
 
-connection.onCompletion(async (params) =>
-  getCompletion(
-    params.textDocument.uri,
-    params.position,
-    params.context.triggerCharacter,
-  ),
+connection.onCompletion(
+  async (params) =>
+    await getCompletion(
+      connection,
+      params.textDocument.uri,
+      params.position,
+      params.context.triggerCharacter,
+    ),
 )
 
 connection.onCodeAction(async (params) =>

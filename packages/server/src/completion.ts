@@ -1,12 +1,59 @@
 import { ast } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
+import { Utils } from "vscode-uri"
 import { BUILTIN_STATEMENTS } from "./constants"
-import { documentASTs, documents, getFilters, getTests } from "./state"
-import { findSymbolsInScope } from "./symbols"
+import { listDirectories } from "./customRequests"
+import {
+  configuration,
+  documentASTs,
+  documents,
+  getFilters,
+  getTests,
+} from "./state"
+import { findSymbolsInScope, getURIs } from "./symbols"
 import { getType, resolveType, stringifySignatureInfo } from "./types"
 import { parentOfType, tokenAt } from "./utilities"
 
+export const getPathCompletions = async (
+  connection: lsp.Connection,
+  uri: string,
+  currentPath: string,
+) => {
+  const lastSlashIndex = currentPath.lastIndexOf("/")
+  if (lastSlashIndex !== -1) {
+    currentPath = currentPath.slice(0, lastSlashIndex)
+  }
+  const baseURIs = getURIs(uri)
+  const currentUris = []
+  for (const uri of baseURIs) {
+    const currentUri = Utils.joinPath(uri, currentPath).toString()
+    currentUris.push(currentUri)
+  }
+
+  const items = await listDirectories(connection, currentUris)
+  return Array.from(new Set(items))
+    .filter(
+      (item) =>
+        item.endsWith("/") ||
+        item.endsWith(".j2") ||
+        item.endsWith(".jinja") ||
+        configuration?.extraFileExtensions?.some?.((extension) =>
+          item.endsWith(extension),
+        ),
+    )
+    .map(
+      (item) =>
+        ({
+          label: item.endsWith("/") ? item.slice(0, -1) : item,
+          kind: item.endsWith("/")
+            ? lsp.CompletionItemKind.Folder
+            : lsp.CompletionItemKind.File,
+        }) satisfies lsp.CompletionItem,
+    )
+}
+
 export const getCompletion = async (
+  connection: lsp.Connection,
   uri: string,
   position: lsp.Position,
   triggerCharacter: string | undefined,
@@ -37,6 +84,19 @@ export const getCompletion = async (
     const offset = document.offsetAt(position)
     const token = tokenAt(tokens, offset)
     if (!token || token.type === "Text") {
+      return
+    }
+
+    if (
+      token.parent instanceof ast.StringLiteral &&
+      (token.parent.parent instanceof ast.Include ||
+        token.parent.parent instanceof ast.Import ||
+        token.parent.parent instanceof ast.Extends ||
+        token.parent.parent instanceof ast.FromImport) &&
+      token.parent.parent.source === token.parent
+    ) {
+      return await getPathCompletions(connection, uri, token.parent.value)
+    } else if (triggerCharacter === '"' || triggerCharacter === "/") {
       return
     }
 

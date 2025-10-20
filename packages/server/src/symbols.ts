@@ -299,6 +299,12 @@ export const argToPython = (arg: ast.Statement) => {
   }
 }
 
+export const getURIs = (currentUri: string) => [
+  Utils.joinPath(URI.parse(currentUri), ".."),
+  ...(configuration?.importURIs?.map((v) => URI.parse(v)) ?? []),
+  ...rootURIs,
+]
+
 export const findImport = async (
   i: ast.Include | ast.Import | ast.FromImport | ast.Extends,
   uri: string,
@@ -307,11 +313,7 @@ export const findImport = async (
   if (!(i.source instanceof ast.StringLiteral)) {
     return []
   }
-  const importURIs = [
-    Utils.joinPath(URI.parse(uri), ".."),
-    ...(configuration?.importURIs?.map((v) => URI.parse(v)) ?? []),
-    ...rootURIs,
-  ]
+  const importURIs = getURIs(uri)
   for (const baseURI of importURIs) {
     const uri = Utils.joinPath(baseURI, i.source.value).toString()
     const contents = await readFile(uri)
