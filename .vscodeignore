@@ -3,6 +3,7 @@
 !dist/server.js
 !dist/extension.js
 !language-configuration.json
+!language-configuration-latex.json
 !syntaxes/*
 !README.md
 !LICENSE
