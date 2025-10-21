@@ -10,37 +10,39 @@ export const getDiagnostics = (uri: string) => {
 
   const items: lsp.Diagnostic[] = []
   const document = documents.get(uri)
-  if (document !== undefined) {
-    for (const e of parserErrors ?? []) {
-      if (e instanceof ast.MissingNode) {
-        const position = document.positionAt(e.offset)
-        items.push({
-          message: `Expected ${e.missingType}`,
-          range: lsp.Range.create(position, position),
-          severity: lsp.DiagnosticSeverity.Error,
-        })
-      } else if (e instanceof ast.UnexpectedToken) {
-        items.push({
-          message: e.message,
-          range: lsp.Range.create(
-            document.positionAt(e.token.start),
-            document.positionAt(e.token.end),
-          ),
-          severity: lsp.DiagnosticSeverity.Error,
-        })
-      }
-    }
+  if (document === undefined) {
+    return
+  }
 
-    for (const e of lexerErrors ?? []) {
+  for (const e of parserErrors ?? []) {
+    if (e instanceof ast.MissingNode) {
+      const position = document.positionAt(e.offset)
+      items.push({
+        message: `Expected ${e.missingType}`,
+        range: lsp.Range.create(position, position),
+        severity: lsp.DiagnosticSeverity.Error,
+      })
+    } else if (e instanceof ast.UnexpectedToken) {
       items.push({
         message: e.message,
         range: lsp.Range.create(
-          document.positionAt(e.start),
-          document.positionAt(e.end),
+          document.positionAt(e.token.start),
+          document.positionAt(e.token.end),
         ),
         severity: lsp.DiagnosticSeverity.Error,
       })
     }
+  }
+
+  for (const e of lexerErrors ?? []) {
+    items.push({
+      message: e.message,
+      range: lsp.Range.create(
+        document.positionAt(e.start),
+        document.positionAt(e.end),
+      ),
+      severity: lsp.DiagnosticSeverity.Error,
+    })
   }
 
   for (const [i, uri] of imports ?? []) {

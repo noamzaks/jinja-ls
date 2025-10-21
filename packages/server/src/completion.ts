@@ -81,169 +81,171 @@ export const getCompletion = async (
     }
   }
 
-  if (tokens !== undefined && document !== undefined) {
-    const offset = document.offsetAt(position)
-    const token = tokenAt(tokens, offset)
-    if (!token || token.type === "Text") {
-      return
-    }
+  if (tokens === undefined || document === undefined) {
+    return
+  }
 
-    if (
-      token.parent instanceof ast.Identifier &&
-      ((token.parent.parent instanceof ast.SetStatement &&
-        token.parent.parent.assignee === token.parent) ||
-        (token.parent.parent instanceof ast.With &&
-          token.parent.parent.assignments.some(
-            (assignment) => assignment.assignee === token.parent,
-          )))
-    ) {
-      return
-    }
+  const offset = document.offsetAt(position)
+  const token = tokenAt(tokens, offset)
+  if (!token || token.type === "Text") {
+    return
+  }
 
-    if (
-      token.parent instanceof ast.StringLiteral &&
-      (token.parent.parent instanceof ast.Include ||
-        token.parent.parent instanceof ast.Import ||
-        token.parent.parent instanceof ast.Extends ||
-        token.parent.parent instanceof ast.FromImport) &&
-      token.parent.parent.source === token.parent
-    ) {
-      return await getPathCompletions(connection, uri, token.parent.value)
-    } else if (triggerCharacter === '"' || triggerCharacter === "/") {
-      return
-    }
+  if (
+    token.parent instanceof ast.Identifier &&
+    ((token.parent.parent instanceof ast.SetStatement &&
+      token.parent.parent.assignee === token.parent) ||
+      (token.parent.parent instanceof ast.With &&
+        token.parent.parent.assignments.some(
+          (assignment) => assignment.assignee === token.parent,
+        )))
+  ) {
+    return
+  }
 
-    const block = parentOfType(token, "Block") as ast.Block | undefined
+  if (
+    token.parent instanceof ast.StringLiteral &&
+    (token.parent.parent instanceof ast.Include ||
+      token.parent.parent instanceof ast.Import ||
+      token.parent.parent instanceof ast.Extends ||
+      token.parent.parent instanceof ast.FromImport) &&
+    token.parent.parent.source === token.parent
+  ) {
+    return await getPathCompletions(connection, uri, token.parent.value)
+  } else if (triggerCharacter === '"' || triggerCharacter === "/") {
+    return
+  }
 
-    if (
-      (token.parent instanceof ast.UnexpectedToken &&
-        token.parent.message.startsWith("Unexpected statement")) ||
-      (token.parent instanceof ast.MissingNode &&
-        token.parent.missingType === "statement name")
-    ) {
-      return BUILTIN_STATEMENTS.map(
-        (statement) =>
+  const block = parentOfType(token, "Block") as ast.Block | undefined
+
+  if (
+    (token.parent instanceof ast.UnexpectedToken &&
+      token.parent.message.startsWith("Unexpected statement")) ||
+    (token.parent instanceof ast.MissingNode &&
+      token.parent.missingType === "statement name")
+  ) {
+    return BUILTIN_STATEMENTS.map(
+      (statement) =>
+        ({
+          label: statement,
+          kind: lsp.CompletionItemKind.Keyword,
+          insertText: statement + " ",
+        }) satisfies lsp.CompletionItem,
+    )
+  } else if (
+    (token.parent?.parent instanceof ast.TestExpression &&
+      token.parent.parent.test === token.parent) ||
+    ((token.value === "is" || token.type === "CloseExpression") &&
+      token.parent instanceof ast.TestExpression &&
+      token.parent.test instanceof ast.Identifier &&
+      token.parent.test.value === "error")
+  ) {
+    return Object.entries(getTests())
+      .filter(([testName]) => /\w/.test(testName))
+      .map(
+        ([testName, test]) =>
           ({
-            label: statement,
-            kind: lsp.CompletionItemKind.Keyword,
-            insertText: statement + " ",
-          }) satisfies lsp.CompletionItem,
-      )
-    } else if (
-      (token.parent?.parent instanceof ast.TestExpression &&
-        token.parent.parent.test === token.parent) ||
-      ((token.value === "is" || token.type === "CloseExpression") &&
-        token.parent instanceof ast.TestExpression &&
-        token.parent.test instanceof ast.Identifier &&
-        token.parent.test.value === "error")
-    ) {
-      return Object.entries(getTests())
-        .filter(([testName]) => /\w/.test(testName))
-        .map(
-          ([testName, test]) =>
-            ({
-              label: testName,
-              kind: lsp.CompletionItemKind.Function,
-              documentation: test?.signature?.documentation,
-            }) satisfies lsp.CompletionItem,
-        )
-    } else if (
-      (token.parent instanceof ast.Identifier &&
-        (token.parent.parent instanceof ast.FilterExpression ||
-          token.parent.parent instanceof ast.FilterStatement) &&
-        token.parent.parent.filter.identifierName === token.parent.value) ||
-      ((token.parent instanceof ast.FilterExpression ||
-        token.parent instanceof ast.FilterStatement) &&
-        ((token.parent.filter instanceof ast.Identifier &&
-          token.parent.filter.value === "error") ||
-          token.parent.filter instanceof ast.MissingNode))
-    ) {
-      return Object.entries(getFilters()).map(
-        ([filterName, filter]) =>
-          ({
-            label: filterName,
+            label: testName,
             kind: lsp.CompletionItemKind.Function,
-            documentation: filter?.signature?.documentation,
+            documentation: test?.signature?.documentation,
           }) satisfies lsp.CompletionItem,
       )
-    } else if (
-      (token.parent instanceof ast.Identifier &&
-        token.parent.parent instanceof ast.Block &&
-        token.parent.parent.name === token.parent) ||
-      (token.parent instanceof ast.Block && token.parent.name.value === "error")
-    ) {
-      const symbols = findSymbolsInScope(block, "Block", document)
-      return Array.from(symbols.keys()).map((symbolName) => ({
-        label: symbolName,
-        kind: lsp.CompletionItemKind.Function,
-      }))
-    } else if (token.parent instanceof ast.MemberExpression) {
-      const object = token.parent.object
-      const symbolType = getType(object, document)
-      const resolvedType = resolveType(symbolType)
+  } else if (
+    (token.parent instanceof ast.Identifier &&
+      (token.parent.parent instanceof ast.FilterExpression ||
+        token.parent.parent instanceof ast.FilterStatement) &&
+      token.parent.parent.filter.identifierName === token.parent.value) ||
+    ((token.parent instanceof ast.FilterExpression ||
+      token.parent instanceof ast.FilterStatement) &&
+      ((token.parent.filter instanceof ast.Identifier &&
+        token.parent.filter.value === "error") ||
+        token.parent.filter instanceof ast.MissingNode))
+  ) {
+    return Object.entries(getFilters()).map(
+      ([filterName, filter]) =>
+        ({
+          label: filterName,
+          kind: lsp.CompletionItemKind.Function,
+          documentation: filter?.signature?.documentation,
+        }) satisfies lsp.CompletionItem,
+    )
+  } else if (
+    (token.parent instanceof ast.Identifier &&
+      token.parent.parent instanceof ast.Block &&
+      token.parent.parent.name === token.parent) ||
+    (token.parent instanceof ast.Block && token.parent.name.value === "error")
+  ) {
+    const symbols = findSymbolsInScope(block, "Block", document)
+    return Array.from(symbols.keys()).map((symbolName) => ({
+      label: symbolName,
+      kind: lsp.CompletionItemKind.Function,
+    }))
+  } else if (token.parent instanceof ast.MemberExpression) {
+    const object = token.parent.object
+    const symbolType = getType(object, document)
+    const resolvedType = resolveType(symbolType)
 
-      if (resolvedType !== undefined) {
-        const completions: lsp.CompletionItem[] = []
-        for (const [key, value] of Object.entries(
-          resolvedType.properties ?? {},
-        )) {
-          // Don't show array indexing as properties
-          if (!isNaN(parseInt(key, 10))) {
-            continue
-          }
-
-          let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Property
-          let documentation: lsp.MarkupContent | string | undefined = undefined
-          const valueType = resolveType(value)
-          if (valueType?.signature) {
-            kind = lsp.CompletionItemKind.Method
-            const docs =
-              valueType?.signature?.documentation ?? symbolType?.documentation
-            documentation = {
-              kind: "markdown",
-              value:
-                "```python\n" +
-                stringifySignatureInfo(valueType.signature) +
-                "\n```" +
-                (docs !== undefined ? "\n" + docs : ""),
-            }
-          } else if (
-            typeof value !== "string" &&
-            value.documentation !== undefined
-          ) {
-            documentation = value.documentation
-          }
-          completions.push({ label: key, kind, documentation })
-        }
-        return completions
-      }
-    } else if (token.parent !== undefined) {
-      const symbols = findSymbolsInScope(token.parent, "Variable", document)
+    if (resolvedType !== undefined) {
       const completions: lsp.CompletionItem[] = []
-      for (const [symbolName, [symbol, document]] of symbols.entries()) {
-        if (
-          symbolName === "True" ||
-          symbolName === "False" ||
-          symbolName === "None"
-        ) {
+      for (const [key, value] of Object.entries(
+        resolvedType.properties ?? {},
+      )) {
+        // Don't show array indexing as properties
+        if (!isNaN(parseInt(key, 10))) {
           continue
         }
 
-        const type = symbol?.getType(document)
-        const resolvedType = resolveType(type)
-        let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Variable
-        if (type !== undefined && resolvedType !== undefined) {
-          if (resolvedType.signature !== undefined) {
-            kind = lsp.CompletionItemKind.Function
+        let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Property
+        let documentation: lsp.MarkupContent | string | undefined = undefined
+        const valueType = resolveType(value)
+        if (valueType?.signature) {
+          kind = lsp.CompletionItemKind.Method
+          const docs =
+            valueType?.signature?.documentation ?? symbolType?.documentation
+          documentation = {
+            kind: "markdown",
+            value:
+              "```python\n" +
+              stringifySignatureInfo(valueType.signature) +
+              "\n```" +
+              (docs !== undefined ? "\n" + docs : ""),
           }
+        } else if (
+          typeof value !== "string" &&
+          value.documentation !== undefined
+        ) {
+          documentation = value.documentation
         }
-
-        completions.push({
-          label: symbolName,
-          kind,
-        })
+        completions.push({ label: key, kind, documentation })
       }
       return completions
     }
+  } else if (token.parent !== undefined) {
+    const symbols = findSymbolsInScope(token.parent, "Variable", document)
+    const completions: lsp.CompletionItem[] = []
+    for (const [symbolName, [symbol, document]] of symbols.entries()) {
+      if (
+        symbolName === "True" ||
+        symbolName === "False" ||
+        symbolName === "None"
+      ) {
+        continue
+      }
+
+      const type = symbol?.getType(document)
+      const resolvedType = resolveType(type)
+      let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Variable
+      if (type !== undefined && resolvedType !== undefined) {
+        if (resolvedType.signature !== undefined) {
+          kind = lsp.CompletionItemKind.Function
+        }
+      }
+
+      completions.push({
+        label: symbolName,
+        kind,
+      })
+    }
+    return completions
   }
 }
