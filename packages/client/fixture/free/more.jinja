@@ -1,0 +1,10 @@
+{% with x = 5 %}
+{% endwith %}
+{% with %}
+    {{ x }}
+    {% set x = 15 %}
+    {{ x }}
+{% endwith %}
+{# magical #}
+{% set x = 16 %}
+{{ x }}

@@ -90,7 +90,10 @@ export const collectSymbols = (
         type: "Variable",
         node: scope,
         identifierNode: assignee,
-        getType: (document) => ({ ...getType(value, document), documentation }),
+        getType: (document) =>
+          value instanceof ast.Identifier && value.value === assignee.value
+            ? undefined
+            : { ...getType(value, document), documentation },
       })
     } else if (assignee instanceof ast.TupleLiteral) {
       for (let i = 0; i < assignee.value.length; i++) {
@@ -100,12 +103,18 @@ export const collectSymbols = (
             type: "Variable",
             node: scope,
             identifierNode: assigneeItem,
-            getType: (document) => ({
-              ...resolveType(
-                resolveType(getType(value, document)).properties[i.toString()],
-              ),
-              documentation,
-            }),
+            getType: (document) =>
+              value instanceof ast.Identifier &&
+              value.value === assigneeItem.value
+                ? undefined
+                : {
+                    ...resolveType(
+                      (resolveType(getType(value, document))?.properties ?? [])[
+                        i.toString()
+                      ],
+                    ),
+                    documentation,
+                  },
           })
         }
       }

@@ -4,6 +4,7 @@ import { activate, getDocUri, rangeToJson } from "./helper"
 
 suite("Should provide hover", () => {
   const errorsUri = getDocUri("errors.jinja")
+  const moreUri = getDocUri("free/more.jinja")
 
   test("Returns hover information for errors.jinja", async () => {
     expect(
@@ -27,6 +28,14 @@ suite("Should provide hover", () => {
         ],
       },
     )
+
+    expect(await getHover(moreUri, new vscode.Position(41, 8))).toEqual({
+      contents: ["```python\nx: int = 16\n```", "magical"],
+      range: [
+        { line: 41, character: 8 },
+        { line: 41, character: 8 },
+      ],
+    })
   })
 })
 

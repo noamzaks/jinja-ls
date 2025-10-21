@@ -100,6 +100,20 @@ suite("Should provide file diagnostics", () => {
         end: 336,
       },
       { severity: 0, message: "Expected expression", start: 371, end: 371 },
+      { severity: 0, message: "Expected identifier", start: 410, end: 410 },
+      {
+        severity: 1,
+        message: "Couldn't find '', maybe add to Jinja LS import URIs?",
+        start: 439,
+        end: 441,
+      },
+      {
+        severity: 1,
+        message:
+          "Couldn't find 'somewhere/', maybe add to Jinja LS import URIs?",
+        start: 456,
+        end: 468,
+      },
     ])
   })
 })

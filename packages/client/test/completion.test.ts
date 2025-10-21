@@ -90,6 +90,24 @@ suite("Should provide completions", () => {
         kind: "Property",
       },
     ])
+
+    expect(
+      await getCompletions(errorsUri, new vscode.Position(32, 9)),
+    ).toMatchObject([{ label: "head", kind: "Function" }])
+
+    expect(
+      await getCompletions(errorsUri, new vscode.Position(34, 12)),
+    ).toMatchObject([
+      { label: "errors.jinja", kind: "File" },
+      { label: "free", kind: "Folder" },
+      { label: "hola.jinja2", kind: "File" },
+      { label: "lib.jinja", kind: "File" },
+      { label: "somewhere", kind: "Folder" },
+    ])
+
+    expect(
+      await getCompletions(errorsUri, new vscode.Position(35, 22)),
+    ).toMatchObject([{ label: "hi.j2", kind: "File" }])
   })
 })
 
