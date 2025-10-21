@@ -225,7 +225,11 @@ export const getType = (
       expression.value,
       "Variable",
     )
-    if (symbol !== undefined && symbolDocument !== undefined) {
+    if (
+      symbol !== undefined &&
+      symbolDocument !== undefined &&
+      symbol.identifierNode?.value !== expression.value
+    ) {
       return symbol.getType(symbolDocument)
     }
   }

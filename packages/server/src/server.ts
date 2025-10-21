@@ -38,6 +38,14 @@ const getDocumentAST = (contents: string) => {
   return {}
 }
 
+export const protectOnThrow = <T>(fn: () => T) => {
+  try {
+    return fn()
+  } catch (e) {
+    console.log(e)
+  }
+}
+
 connection.onInitialize((params) => {
   for (const folder of params.workspaceFolders ?? []) {
     rootURIs.push(URI.parse(folder.uri))
@@ -147,10 +155,13 @@ const analyzeDocument = async (document: TextDocument) => {
     }
 
     await Promise.all(promises)
-    connection.sendDiagnostics({
-      uri: document.uri,
-      diagnostics: getDiagnostics(document.uri).items,
-    })
+    const diagnostics = protectOnThrow(() => getDiagnostics(document.uri).items)
+    if (diagnostics !== undefined) {
+      connection.sendDiagnostics({
+        uri: document.uri,
+        diagnostics,
+      })
+    }
   }
 }
 
@@ -173,37 +184,43 @@ lspDocuments.onDidChangeContent((event) => {
 })
 
 connection.languages.semanticTokens.on(async (params) =>
-  getSemanticTokens(params.textDocument.uri),
+  protectOnThrow(() => getSemanticTokens(params.textDocument.uri)),
 )
 
 connection.onHover(async (params) =>
-  getHover(params.textDocument.uri, params.position),
+  protectOnThrow(() => getHover(params.textDocument.uri, params.position)),
 )
 
 connection.onDefinition(async (params) =>
-  getDefinition(params.textDocument.uri, params.position),
+  protectOnThrow(() => getDefinition(params.textDocument.uri, params.position)),
 )
 
 connection.onSignatureHelp(async (params) =>
-  getSignatureHelp(params.textDocument.uri, params.position),
+  protectOnThrow(() =>
+    getSignatureHelp(params.textDocument.uri, params.position),
+  ),
 )
 
 connection.onCompletion(
   async (params) =>
-    await getCompletion(
-      connection,
-      params.textDocument.uri,
-      params.position,
-      params.context.triggerCharacter,
+    await protectOnThrow(() =>
+      getCompletion(
+        connection,
+        params.textDocument.uri,
+        params.position,
+        params.context.triggerCharacter,
+      ),
     ),
 )
 
 connection.onCodeAction(async (params) =>
-  getCodeAction(params.textDocument.uri, params.context.diagnostics),
+  protectOnThrow(() =>
+    getCodeAction(params.textDocument.uri, params.context.diagnostics),
+  ),
 )
 
 connection.onDocumentLinks(async (params) =>
-  getDocumentLinks(params.textDocument.uri),
+  protectOnThrow(() => getDocumentLinks(params.textDocument.uri)),
 )
 
 registerCustomCommands(connection)

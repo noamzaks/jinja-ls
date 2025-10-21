@@ -44,9 +44,9 @@ export const getDiagnostics = (uri: string) => {
   }
 
   for (const [i, uri] of imports ?? []) {
-    if (uri === undefined) {
+    if (uri === undefined && i.source instanceof ast.StringLiteral) {
       items.push({
-        message: "Couldn't resolve import, try adding to Jinja LS import URIs",
+        message: `Couldn't find '${i.source.value}', maybe add to Jinja LS import URIs?`,
         range: lsp.Range.create(
           document.positionAt(i.source.getStart()),
           document.positionAt(i.source.getEnd()),

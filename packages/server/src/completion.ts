@@ -88,6 +88,18 @@ export const getCompletion = async (
     }
 
     if (
+      token.parent instanceof ast.Identifier &&
+      ((token.parent.parent instanceof ast.SetStatement &&
+        token.parent.parent.assignee === token.parent) ||
+        (token.parent.parent instanceof ast.With &&
+          token.parent.parent.assignments.some(
+            (assignment) => assignment.assignee === token.parent,
+          )))
+    ) {
+      return
+    }
+
+    if (
       token.parent instanceof ast.StringLiteral &&
       (token.parent.parent instanceof ast.Include ||
         token.parent.parent instanceof ast.Import ||
