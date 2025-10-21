@@ -84,10 +84,10 @@ adds globals from the `./globals.json` file (relative to the document) to the gi
 
 ### Custom Globals
 
-You can add globals from your extension with the `jinja-ls.addGlobals` command, for example:
+You can add globals from your extension with the `jinjaLS.addGlobals` command, for example:
 
 ```ts
-vscode.commands.executeCommand("jinja-ls.setGlobals", {
+vscode.commands.executeCommand("jinjaLS.setGlobals", {
   hi: "hello",
   other: 1574,
   test: 1.2,
@@ -95,11 +95,11 @@ vscode.commands.executeCommand("jinja-ls.setGlobals", {
 })
 ```
 
-This merges the existing globals set by previous calls to `jinja-ls.addGlobals`, if you wish to remove them set the third parameter `merge` to false:
+This merges the existing globals set by previous calls to `jinjaLS.addGlobals`, if you wish to remove them set the third parameter `merge` to false:
 
 ```ts
 vscode.commands.executeCommand(
-  "jinja-ls.setGlobals",
+  "jinjaLS.setGlobals",
   {
     hi: "hello",
   },
