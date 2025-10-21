@@ -228,7 +228,8 @@ export const getType = (
     if (
       symbol !== undefined &&
       symbolDocument !== undefined &&
-      symbol.identifierNode?.value !== expression.value
+      (symbol.identifierNode?.value !== expression.value ||
+        symbolDocument.uri !== document.uri)
     ) {
       return symbol.getType(symbolDocument)
     }

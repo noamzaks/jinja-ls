@@ -37,6 +37,7 @@ export const getPathCompletions = async (
         item.endsWith("/") ||
         item.endsWith(".j2") ||
         item.endsWith(".jinja") ||
+        item.endsWith(".jinja2") ||
         configuration?.extraFileExtensions?.some?.((extension) =>
           item.endsWith(extension),
         ),

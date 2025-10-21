@@ -106,7 +106,6 @@ connection.onInitialize((params) => {
 const analyzeDocument = async (document: TextDocument) => {
   documents.set(document.uri, document)
   const ast = getDocumentAST(document.getText())
-  documentASTs.set(document.uri, ast)
   const symbols = new Map<string, SymbolInfo[]>()
   const imports: (ast.Include | ast.Import | ast.FromImport | ast.Extends)[] =
     []
@@ -117,7 +116,21 @@ const analyzeDocument = async (document: TextDocument) => {
       collectSymbols(statement, symbols, imports, lsCommands)
     })
 
+    // Update initial analysis before going async
+    documentASTs.set(document.uri, ast)
     documentSymbols.set(document.uri, symbols)
+    const previousImports = documentImports.get(document.uri) ?? []
+    documentImports.set(
+      document.uri,
+      imports.map((i) => [
+        i,
+        (previousImports.find(
+          (x) =>
+            (x[0].source as ast.StringLiteral | undefined)?.value ===
+            (i.source as ast.StringLiteral | undefined)?.value,
+        ) ?? [])[1],
+      ]),
+    )
 
     const documentsToAnalyze: [string, string][] = []
     const resolvedImports: [
