@@ -28,6 +28,7 @@ export const globals: Record<string, unknown> = {}
 export const documentGlobals: Record<string, Record<string, unknown>> = {}
 export const configuration: {
   importURIs?: string[] | undefined
+  importPaths?: string[] | undefined
   extraTests?: Record<string, TypeInfo>
   extraFilters?: Record<string, TypeInfo>
   extraFileExtensions?: string[]

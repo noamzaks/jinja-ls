@@ -668,9 +668,17 @@
             "type": "string"
           }
         },
+        "jinjaLS.importPaths": {
+          "title": "Import Paths",
+          "description": "Additional paths to search for include/import/extends, e.g. C:\\jinja or /etc/jinja",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "jinjaLS.importURIs": {
           "title": "Import URIs",
-          "description": "Additional URIs to search for include/import/extends, e.g. file://c:/jinja or file://etc/jinja",
+          "description": "Additional URIs to search for include/import/extends. You should probably use Import Paths instead, only use this if you know what you're doing.",
           "type": "array",
           "items": {
             "type": "string"

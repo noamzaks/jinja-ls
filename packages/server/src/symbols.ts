@@ -311,6 +311,7 @@ export const argToPython = (arg: ast.Statement) => {
 export const getURIs = (currentUri: string) => [
   Utils.joinPath(URI.parse(currentUri), ".."),
   ...(configuration?.importURIs?.map((v) => URI.parse(v)) ?? []),
+  ...(configuration?.importPaths?.map((v) => URI.file(v)) ?? []),
   ...rootURIs,
 ]
 
