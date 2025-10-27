@@ -192,15 +192,19 @@ export function parse(
   }
 
   function eatUntil(type: string, missingType: string, includingEnd = true) {
+    const result: Node[] = []
     while (current < tokens.length && tokens[current]?.type !== type) {
+      result.push(tokens[current])
       current++
     }
     if (current === tokens.length) {
       createMissingNode(missingType)
     }
     if (tokens[current]?.type === type && includingEnd) {
+      result.push(tokens[current])
       current++
     }
+    return result
   }
 
   function parseJinjaStatement(): Statement {
@@ -441,8 +445,10 @@ export function parse(
       asToken: TokenNode | undefined
       name: Identifier | undefined
     }[] = []
+    const commas: TokenNode[] = []
     let context: Identifier | undefined = undefined
 
+    let missing: MissingNode | undefined = undefined
     while (
       tokens[current]?.type === "Identifier" ||
       tokens[current]?.type === "Comma"
@@ -453,16 +459,16 @@ export function parse(
       }
 
       if (imports.length !== 0) {
-        expect(TOKEN_TYPES.Comma, "','")
+        commas.push(expect(TOKEN_TYPES.Comma, "','"))
       }
 
       if (tokens[current]?.type !== "Identifier") {
-        const missing = createMissingNode(
+        missing = createMissingNode(
           "identifier to import",
           tokens[current].start,
         )
-        eatUntil(TOKEN_TYPES.CloseStatement, "'%}'")
-        return missing
+        missing.addChildren(...eatUntil(TOKEN_TYPES.CloseStatement, "'%}'"))
+        break
       }
 
       const source = new Identifier(tokens[current].value, tokens[current])
@@ -488,17 +494,18 @@ export function parse(
       imports.push({ source, asToken, name })
     }
 
-    if (imports.length === 0) {
-      const missing = createMissingNode(
-        "identifier to import",
-        tokens[current].start,
-      )
-      eatUntil(TOKEN_TYPES.CloseStatement, "'%}'")
-      return missing
+    if (imports.length === 0 && !missing) {
+      missing = createMissingNode("identifier to import", tokens[current].start)
+      missing.addChildren(...eatUntil(TOKEN_TYPES.CloseStatement, "'%}'"))
     }
 
     const result = new FromImport(source, importToken, imports, context)
-    result.addChild(expect(TOKEN_TYPES.CloseStatement, "'%}'"), "closeToken")
+    if (!missing) {
+      result.addChild(expect(TOKEN_TYPES.CloseStatement, "'%}'"), "closeToken")
+    } else {
+      result.addChild(missing)
+    }
+    result.addChildren(...commas)
     return result
   }
 

@@ -1,16 +1,18 @@
 import { ast } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
+import { TextDocument } from "vscode-languageserver-textdocument"
 import { Utils } from "vscode-uri"
 import { BUILTIN_STATEMENTS } from "./constants"
 import { listDirectories } from "./customRequests"
 import {
   configuration,
   documentASTs,
+  documentImports,
   documents,
   getFilters,
   getTests,
 } from "./state"
-import { findSymbolsInScope, getURIs } from "./symbols"
+import { findSymbolsInScope, getURIs, SymbolInfo } from "./symbols"
 import { getType, resolveType, stringifySignatureInfo } from "./types"
 import { parentOfType, tokenAt } from "./utilities"
 
@@ -53,6 +55,39 @@ export const getPathCompletions = async (
     )
 }
 
+const symbolsToCompletionItems = (
+  symbols: Map<
+    string,
+    [Extract<SymbolInfo, { type: "Variable" }>, TextDocument]
+  >,
+) => {
+  const completions: lsp.CompletionItem[] = []
+  for (const [symbolName, [symbol, document]] of symbols.entries()) {
+    if (
+      symbolName === "True" ||
+      symbolName === "False" ||
+      symbolName === "None"
+    ) {
+      continue
+    }
+
+    const type = symbol?.getType(document)
+    const resolvedType = resolveType(type)
+    let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Variable
+    if (type !== undefined && resolvedType !== undefined) {
+      if (resolvedType.signature !== undefined) {
+        kind = lsp.CompletionItemKind.Function
+      }
+    }
+
+    completions.push({
+      label: symbolName,
+      kind,
+    })
+  }
+  return completions
+}
+
 export const getCompletion = async (
   connection: lsp.Connection,
   uri: string,
@@ -73,8 +108,9 @@ export const getCompletion = async (
         text.endsWith("{{") ||
         text.endsWith("|") ||
         text.endsWith("is") ||
-        /{%[ \t]*filter/.test(lastLine) ||
-        /{%[ \t]*block/.test(lastLine)
+        /{%-?[ \t]*filter/.test(lastLine) ||
+        /{%-?[ \t]*block/.test(lastLine) ||
+        /{%-?[ \t]*from/.test(lastLine)
       )
     ) {
       return
@@ -98,9 +134,59 @@ export const getCompletion = async (
       (token.parent.parent instanceof ast.With &&
         token.parent.parent.assignments.some(
           (assignment) => assignment.assignee === token.parent,
-        )))
+        )) ||
+      (token.parent.parent instanceof ast.FromImport &&
+        token.parent.parent.imports.some((i) => i.name === token.parent)) ||
+      (token.parent.parent instanceof ast.For &&
+        token.parent.parent.loopvar === token.parent) ||
+      ((token.parent.parent instanceof ast.Import ||
+        token.parent.parent instanceof ast.Macro) &&
+        token.parent.parent.name === token.parent))
   ) {
     return
+  }
+
+  const fromImport = parentOfType(token, "FromImport") as
+    | ast.FromImport
+    | undefined
+  if (
+    fromImport !== undefined &&
+    (fromImport.imports.some((i) => i.source === token.parent) ||
+      (token.parent instanceof ast.MissingNode &&
+        token.parent.missingType === "identifier to import") ||
+      token.type === "Comma")
+  ) {
+    if (
+      fromImport.imports.some((i) => i.source === token.parent) &&
+      offset > token.parent.getEnd()
+    ) {
+      return
+    }
+
+    const imports = documentImports.get(uri)
+    if (!imports) {
+      return
+    }
+
+    const resolvedImport = imports.find((i) => i[0] === fromImport)
+    if (!resolvedImport[1]) {
+      return
+    }
+    const importedUri = resolvedImport[1]
+
+    const importedDocument = documents.get(importedUri)
+    const importedProgram = documentASTs.get(importedUri)?.program
+    if (!importedDocument || !importedProgram) {
+      return
+    }
+
+    const symbols = findSymbolsInScope(
+      importedProgram,
+      "Variable",
+      importedDocument,
+      { skipSpecialVariables: true, skipGlobals: true },
+    )
+    return symbolsToCompletionItems(symbols)
   }
 
   if (
@@ -222,30 +308,6 @@ export const getCompletion = async (
     }
   } else if (token.parent !== undefined) {
     const symbols = findSymbolsInScope(token.parent, "Variable", document)
-    const completions: lsp.CompletionItem[] = []
-    for (const [symbolName, [symbol, document]] of symbols.entries()) {
-      if (
-        symbolName === "True" ||
-        symbolName === "False" ||
-        symbolName === "None"
-      ) {
-        continue
-      }
-
-      const type = symbol?.getType(document)
-      const resolvedType = resolveType(type)
-      let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Variable
-      if (type !== undefined && resolvedType !== undefined) {
-        if (resolvedType.signature !== undefined) {
-          kind = lsp.CompletionItemKind.Function
-        }
-      }
-
-      completions.push({
-        label: symbolName,
-        kind,
-      })
-    }
-    return completions
+    return symbolsToCompletionItems(symbols)
   }
 }

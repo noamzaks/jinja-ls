@@ -625,6 +625,10 @@ export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
   node: ast.Node,
   type: K,
   document: TextDocument,
+  {
+    skipSpecialVariables,
+    skipGlobals,
+  }: { skipSpecialVariables?: boolean; skipGlobals?: boolean } = {},
 ): Map<string, [Extract<SymbolInfo, { type: K }>, TextDocument]> => {
   const result = new Map<
     string,
@@ -658,48 +662,52 @@ export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
   }
 
   if (type === "Variable") {
-    for (const [definerType, specialSymbols] of Object.entries(
-      SPECIAL_SYMBOLS,
-    )) {
-      const parent = parentOfType(node, definerType)
-      if (parent !== undefined) {
-        for (const symbolName in specialSymbols) {
-          result.set(symbolName, [
-            {
-              type: "Variable",
-              node: parent as ast.Macro | ast.For | ast.Block | ast.Program,
-              identifierNode:
-                parent instanceof ast.Macro ? parent.name : undefined,
-              getType: () => specialSymbols[symbolName],
-            } as SymbolInfo as Extract<SymbolInfo, { type: K }>,
-            document,
-          ])
+    if (!skipSpecialVariables) {
+      for (const [definerType, specialSymbols] of Object.entries(
+        SPECIAL_SYMBOLS,
+      )) {
+        const parent = parentOfType(node, definerType)
+        if (parent !== undefined) {
+          for (const symbolName in specialSymbols) {
+            result.set(symbolName, [
+              {
+                type: "Variable",
+                node: parent as ast.Macro | ast.For | ast.Block | ast.Program,
+                identifierNode:
+                  parent instanceof ast.Macro ? parent.name : undefined,
+                getType: () => specialSymbols[symbolName],
+              } as SymbolInfo as Extract<SymbolInfo, { type: K }>,
+              document,
+            ])
+          }
         }
       }
     }
 
-    for (const key in globals) {
-      result.set(key, [
-        {
-          type: "Variable",
-          node: getProgramOf(node),
-          getType: () => getTypeInfoFromJS(globals[key]),
-        } as SymbolInfo as Extract<SymbolInfo, { type: K }>,
-        document,
-      ])
-    }
-
-    if (documentGlobals[document.uri]) {
-      for (const key in documentGlobals[document.uri]) {
+    if (!skipGlobals) {
+      for (const key in globals) {
         result.set(key, [
           {
             type: "Variable",
             node: getProgramOf(node),
-            getType: () =>
-              getTypeInfoFromJS(documentGlobals[document.uri][key]),
+            getType: () => getTypeInfoFromJS(globals[key]),
           } as SymbolInfo as Extract<SymbolInfo, { type: K }>,
           document,
         ])
+      }
+
+      if (documentGlobals[document.uri]) {
+        for (const key in documentGlobals[document.uri]) {
+          result.set(key, [
+            {
+              type: "Variable",
+              node: getProgramOf(node),
+              getType: () =>
+                getTypeInfoFromJS(documentGlobals[document.uri][key]),
+            } as SymbolInfo as Extract<SymbolInfo, { type: K }>,
+            document,
+          ])
+        }
       }
     }
   }
