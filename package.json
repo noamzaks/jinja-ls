@@ -688,6 +688,65 @@
             "type": "string"
           }
         },
+        "jinjaLS.extraGlobals": {
+          "title": "Extra Globals",
+          "description": "Additional globals that are defined in the environment",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "elementType": {
+                "type": "string"
+              },
+              "literalValue": {
+                "type": "string"
+              },
+              "documentation": {
+                "type": "string"
+              },
+              "signature": {
+                "type": "object",
+                "properties": {
+                  "documentation": {
+                    "type": "string"
+                  },
+                  "arguments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "default": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "name"
+                      ]
+                    }
+                  },
+                  "return": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": []
+          }
+        },
         "jinjaLS.extraTests": {
           "title": "Extra Tests",
           "description": "Additional tests that are defined in the environment",

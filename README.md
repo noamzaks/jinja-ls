@@ -53,7 +53,7 @@ Errors are shown using the awesome [Error Lens](https://marketplace.visualstudio
 ### Configuration
 
 - In VSCode settings you may add directorie paths to "Jinjs LS: Import Paths" to be searched in include/import/from import/extends statements.
-- You can also define extra tests and filter that are available in your environment.
+- You can also define extra tests, filters and globals that are available in your environment.
 - The "Jinja LS: Extra File Extensions" option can be used to show path completion for additional file extensions.
 
 ### Documentation

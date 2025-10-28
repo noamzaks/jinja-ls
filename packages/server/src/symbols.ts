@@ -410,6 +410,18 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
     }
 
     if (
+      configuration.extraGlobals !== undefined &&
+      configuration.extraGlobals[name] !== undefined &&
+      program !== undefined
+    ) {
+      return {
+        type: "Variable",
+        node: program,
+        getType: () => configuration.extraGlobals[name],
+      } as SymbolInfo as Extract<SymbolInfo, { type: K }>
+    }
+
+    if (
       documentGlobals[document.uri] !== undefined &&
       documentGlobals[document.uri][name] !== undefined &&
       program !== undefined
@@ -704,6 +716,19 @@ export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
               node: getProgramOf(node),
               getType: () =>
                 getTypeInfoFromJS(documentGlobals[document.uri][key]),
+            } as SymbolInfo as Extract<SymbolInfo, { type: K }>,
+            document,
+          ])
+        }
+      }
+
+      if (configuration.extraGlobals) {
+        for (const key in configuration.extraGlobals) {
+          result.set(key, [
+            {
+              type: "Variable",
+              node: getProgramOf(node),
+              getType: () => configuration.extraGlobals[key],
             } as SymbolInfo as Extract<SymbolInfo, { type: K }>,
             document,
           ])
