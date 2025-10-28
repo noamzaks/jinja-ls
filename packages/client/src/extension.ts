@@ -1,5 +1,7 @@
 import * as path from "path"
+import { parse as parseTOML } from "toml"
 import * as vscode from "vscode"
+import { parse as parseYAML } from "yaml"
 
 import * as lsp from "vscode-languageclient/node"
 
@@ -105,6 +107,70 @@ export const activate = async (context: vscode.ExtensionContext) => {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("jinjaLS.restart", () => client.restart()),
+    vscode.commands.registerCommand("jinjaLS.setGlobalsFromFile", () => {
+      if (!vscode.window.activeTextEditor) {
+        return
+      }
+
+      const documentUri = vscode.window.activeTextEditor.document.uri
+
+      vscode.window
+        .showOpenDialog({
+          title: "Choose JSON/YAML/TOML to add globals from",
+          canSelectMany: true,
+        })
+        .then(async (chosenUris) => {
+          let globals: Record<string, unknown> = {}
+
+          for (const uriToAdd of chosenUris) {
+            const contents = (
+              await vscode.workspace.fs.readFile(uriToAdd)
+            ).toString()
+            let extension = uriToAdd.fsPath.split(".").at(-1)!
+            if (
+              !(
+                extension.endsWith("json") ||
+                extension.endsWith("yaml") ||
+                extension.endsWith("yml") ||
+                extension.endsWith("toml")
+              )
+            ) {
+              extension = await vscode.window.showQuickPick(
+                ["json", "yaml", "toml"],
+                {
+                  title: `Select file type for ${uriToAdd.toString(true)}`,
+                },
+              )
+            }
+            let globalsToAdd = {}
+            if (extension === "json") {
+              globalsToAdd = JSON.parse(contents)
+            } else if (extension === "yaml" || extension === "yml") {
+              globalsToAdd = parseYAML(contents)
+            } else if (extension === "toml") {
+              globalsToAdd = parseTOML(contents)
+            }
+            if (Object.keys(globalsToAdd).length !== 0) {
+              const key = await vscode.window.showQuickPick(
+                Object.keys(globalsToAdd).sort(),
+                {
+                  title: `Optionally select a key from which to add globals for ${uriToAdd.toString(true)}`,
+                },
+              )
+              if (key) {
+                globalsToAdd = globalsToAdd[key]
+              }
+              globals = { ...globals, ...globalsToAdd }
+            }
+          }
+
+          client.sendRequest(SetGlobalsRequest, {
+            globals,
+            uri: documentUri.toString(),
+            merge: false,
+          })
+        })
+    }),
     vscode.commands.registerCommand(
       "jinjaLS.setGlobals",
       (globals: Record<string, unknown>, uri?: string, merge = true) =>

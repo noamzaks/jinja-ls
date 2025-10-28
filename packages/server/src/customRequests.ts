@@ -42,7 +42,7 @@ export const setGlobals = (
     g = documentGlobals[uri]
   }
   if (!merge) {
-    for (const key in globals) {
+    for (const key in g) {
       delete g[key]
     }
   }

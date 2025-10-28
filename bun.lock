@@ -32,7 +32,9 @@
       "name": "@jinja-ls/client",
       "version": "0.0.1",
       "dependencies": {
+        "toml": "^3.0.0",
         "vscode-languageclient": "^9.0.1",
+        "yaml": "^2.8.1",
       },
     },
     "packages/language": {

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.11] - 2025-10-28
+
+### Added
+
+- The setGlobalsFromFile command which can add global from file (allowing JSON/YAML/TOML).
+- Autocompletion now suggests symbols in "from ... import " statements.
+- Import paths is now also supported in the configuration, simplifying usage on Windows.
+
+### Fixed
+
+- Autocompletion now ignores additional places where it is irrelevant.
+
 ## [0.0.10] - 2025-10-22
 
 ### Changed

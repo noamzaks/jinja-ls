@@ -12,7 +12,7 @@
   },
   "displayName": "Jinja Language Server",
   "description": "Feature-rich language server for Jinja.",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "author": "Noam Zaks <noam@noamzaks.com> (https://noamzaks.com/)",
   "icon": "images/icon-1024.png",
   "license": "MIT",
@@ -655,6 +655,10 @@
       {
         "command": "jinjaLS.restart",
         "title": "Jinja LS: Restart Server"
+      },
+      {
+        "command": "jinjaLS.setGlobalsFromFile",
+        "title": "Jinja LS: Set Globals From File"
       }
     ],
     "configuration": {

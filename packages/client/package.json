@@ -3,6 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
-    "vscode-languageclient": "^9.0.1"
+    "toml": "^3.0.0",
+    "vscode-languageclient": "^9.0.1",
+    "yaml": "^2.8.1"
   }
 }
