@@ -175,13 +175,12 @@ export const getCompletion = async (
     const importedUri = resolvedImport[1]
 
     const importedDocument = documents.get(importedUri)
-    const importedProgram = documentASTs.get(importedUri)?.program
-    if (!importedDocument || !importedProgram) {
+    if (!importedDocument) {
       return
     }
 
     const symbols = findSymbolsInScope(
-      importedProgram,
+      undefined,
       "Variable",
       importedDocument,
       { skipSpecialVariables: true, skipGlobals: true },

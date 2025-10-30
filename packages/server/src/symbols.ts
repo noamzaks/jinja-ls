@@ -634,7 +634,7 @@ export const getProgramOf = (node: ast.Node) => {
 }
 
 export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
-  node: ast.Node,
+  node: ast.Node | undefined,
   type: K,
   document: TextDocument,
   {
