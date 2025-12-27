@@ -280,7 +280,7 @@ export const getCompletion = async (
           continue
         }
 
-        let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Property
+        let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Field
         let documentation: lsp.MarkupContent | string | undefined = undefined
         const valueType = resolveType(value)
         if (valueType?.signature) {
