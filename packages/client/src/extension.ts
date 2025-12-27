@@ -57,6 +57,7 @@ export const activate = async (context: vscode.ExtensionContext) => {
       { scheme: "file", language: "jinja-php" },
       { scheme: "file", language: "jinja-cisco" },
       { scheme: "file", language: "jinja-rust" },
+      { scheme: "file", language: "jinja-typst" },
     ],
   }
 
@@ -67,11 +68,15 @@ export const activate = async (context: vscode.ExtensionContext) => {
     clientOptions,
   )
 
-  client.onRequest("jinja/readFile", async ({ uri }: { uri: string }) => {
+  client.onRequest("jinja/readUri", async ({ uri }: { uri: string }) => {
     try {
-      const document = await vscode.workspace.openTextDocument(
-        vscode.Uri.parse(uri).fsPath,
-      )
+      const parsedUri = vscode.Uri.parse(uri)
+      if (parsedUri.scheme === "http" || parsedUri.scheme === "https") {
+        const response = await fetch(uri)
+        const contents = await response.text()
+        return { contents }
+      }
+      const document = await vscode.workspace.openTextDocument(parsedUri.fsPath)
       return { contents: document.getText() }
     } catch {
       return {}

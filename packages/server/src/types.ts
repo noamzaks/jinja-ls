@@ -34,8 +34,29 @@ export interface TypeInfo {
 export interface TypeReference {
   // Should be in BUILTIN_TYPES
   type: string
+  // Used for Union types
+  types?: (TypeInfo | TypeReference | string)[]
   literalValue?: string
   documentation?: string
+}
+
+export const createUnionType = (type: TypeReference): TypeInfo => {
+  let properties: Record<string, string | TypeInfo | TypeReference> = {}
+  const resolved = (type.types ?? []).map(resolveType)
+  if (resolved.length > 0) {
+    // Reverse so that items that appear in multiple options use the first one.
+    for (let i = resolved.length - 1; i >= 0; i--) {
+      properties = {
+        ...properties,
+        ...(resolved[i].properties ?? {}),
+      }
+    }
+  }
+  return {
+    name: `Union[${resolved.map((t) => t.name)?.join(", ")}]`,
+    properties,
+    documentation: type.documentation,
+  }
 }
 
 export const resolveType = (
@@ -45,6 +66,9 @@ export const resolveType = (
     return BUILTIN_TYPES[type] ?? { name: type }
   }
   if (type?.type) {
+    if (type.type === "Union") {
+      return createUnionType(type as TypeReference)
+    }
     return BUILTIN_TYPES[type.type]
   }
   return type as TypeInfo | undefined
@@ -280,6 +304,9 @@ export const getTypeInfoFromJS = (
     )
     return createTupleType(properties, JSON.stringify(value))
   } else if (typeof value === "object") {
+    if (value["x-jinja-ls-type"] !== undefined) {
+      return value["x-jinja-ls-type"]
+    }
     return {
       name: "dict",
       literalValue: JSON.stringify(value),

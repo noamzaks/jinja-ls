@@ -3,11 +3,11 @@ import { documentGlobals, globals } from "./state"
 
 // Requests from the client
 
-export const ReadFileRequest = new lsp.RequestType<
+export const ReadUriRequest = new lsp.RequestType<
   { uri: string },
   { contents: string | undefined },
   void
->("jinja/readFile")
+>("jinja/readUri")
 
 export const ListDirectoriesRequest = new lsp.RequestType<
   { uris: string[] },
@@ -15,11 +15,11 @@ export const ListDirectoriesRequest = new lsp.RequestType<
   void
 >("jinja/listDirectories")
 
-export const readFile = async (
+export const readUri = async (
   connection: lsp.Connection,
   uri: string,
 ): Promise<string | undefined> =>
-  (await connection.sendRequest(ReadFileRequest, { uri }))?.contents
+  (await connection.sendRequest(ReadUriRequest, { uri }))?.contents
 
 export const listDirectories = async (
   connection: lsp.Connection,

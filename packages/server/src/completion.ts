@@ -297,7 +297,7 @@ export const getCompletion = async (
           }
         } else if (
           typeof value !== "string" &&
-          value.documentation !== undefined
+          value?.documentation !== undefined
         ) {
           documentation = value.documentation
         }

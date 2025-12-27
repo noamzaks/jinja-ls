@@ -82,6 +82,13 @@ You can specify LS commands using Jinja comments, for example:
 
 adds globals from the `./globals.json` file (relative to the document) to the given document!
 
+This also supports **rich globals** from JSON Schema files (which can be generated from Pydantic for example)
+as well as HTTP and HTTPS URLs, for example:
+
+```jinja
+{#- jinja-ls: globals https://raw.githubusercontent.com/rendercv/rendercv/refs/heads/main/schema.json -#}
+```
+
 ### Custom Globals
 
 You can add globals from your extension with the `jinjaLS.addGlobals` command, for example:

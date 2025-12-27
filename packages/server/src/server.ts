@@ -5,7 +5,7 @@ import { createConnection } from "vscode-languageserver/node"
 import { URI } from "vscode-uri"
 import { getCodeAction } from "./codeAction"
 import { getCompletion } from "./completion"
-import { readFile, registerCustomCommands } from "./customRequests"
+import { readUri, registerCustomCommands } from "./customRequests"
 import { getDefinition } from "./definition"
 import { getDiagnostics } from "./diagnostics"
 import { getDocumentLinks } from "./documentLinks"
@@ -83,6 +83,7 @@ connection.onInitialize((params) => {
           { scheme: "file", language: "jinja-php" },
           { scheme: "file", language: "jinja-cisco" },
           { scheme: "file", language: "jinja-rust" },
+          { scheme: "file", language: "jinja-typst" },
         ],
         full: true,
       },
@@ -139,7 +140,7 @@ const analyzeDocument = async (document: TextDocument) => {
     ][] = []
     for (const i of imports) {
       const [uri, contents] = await findImport(i, document.uri, (uri) =>
-        readFile(connection, uri),
+        readUri(connection, uri),
       )
       documentsToAnalyze.push([uri, contents])
       resolvedImports.push([i, uri])

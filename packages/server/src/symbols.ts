@@ -318,7 +318,7 @@ export const getURIs = (currentUri: string) => [
 export const findImport = async (
   i: ast.Include | ast.Import | ast.FromImport | ast.Extends,
   uri: string,
-  readFile: (uri: string) => Promise<string | undefined>,
+  readUri: (uri: string) => Promise<string | undefined>,
 ) => {
   if (!(i.source instanceof ast.StringLiteral)) {
     return []
@@ -326,7 +326,7 @@ export const findImport = async (
   const importURIs = getURIs(uri)
   for (const baseURI of importURIs) {
     const uri = Utils.joinPath(baseURI, i.source.value).toString()
-    const contents = await readFile(uri)
+    const contents = await readUri(uri)
     if (contents !== undefined) {
       return [uri, contents]
     }

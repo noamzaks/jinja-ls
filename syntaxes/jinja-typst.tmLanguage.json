@@ -1,0 +1,13 @@
+{
+  "name": "jinja-typst",
+  "scopeName": "source.typst.jinja",
+  "comment": "Jinja Typst Templates",
+  "patterns": [
+    {
+      "include": "source.jinja"
+    },
+    {
+      "include": "source.typst"
+    }
+  ]
+}

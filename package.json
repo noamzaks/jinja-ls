@@ -1,34 +1,35 @@
 {
   "name": "jinja-ls",
-  "private": "true",
-  "main": "./dist/extension",
-  "scripts": {
-    "compile": "rollup -c",
-    "watch": "rollup -c -w",
-    "package": "npm run compile && vsce package --no-dependencies",
-    "test-e2e": "npm run compile && node dist/tests/run.js",
-    "test-language": "vitest run --root packages/language",
-    "lint": "npm run eslint packages"
-  },
-  "displayName": "Jinja Language Server",
-  "description": "Feature-rich language server for Jinja.",
   "version": "0.0.12",
   "author": "Noam Zaks <noam@noamzaks.com> (https://noamzaks.com/)",
-  "icon": "images/icon-1024.png",
-  "license": "MIT",
-  "sponsor": {
-    "url": "https://github.com/sponsors/noamzaks"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/noamzaks/jinja-ls"
   },
-  "workspaces": [
-    "packages/*"
-  ],
-  "publisher": "noamzaks",
-  "engines": {
-    "vscode": "^1.75.0"
+  "main": "./dist/extension",
+  "devDependencies": {
+    "@eslint/js": "^9.37.0",
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.4",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24.5.2",
+    "@types/vscode": "1.75.0",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.6.2",
+    "eslint": "^9.37.0",
+    "expect": "^30.2.0",
+    "glob": "^11.0.3",
+    "globals": "^16.4.0",
+    "jiti": "^2.6.1",
+    "mocha": "^11.7.4",
+    "prettier": "^3.6.2",
+    "rollup": "^4.52.3",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.45.0",
+    "vitest": "^3.2.4"
   },
   "categories": [
     "Programming Languages"
@@ -501,6 +502,18 @@
           ".rs.jinja2"
         ],
         "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "jinja-typst",
+        "aliases": [
+          "Jinja Typst"
+        ],
+        "extensions": [
+          ".typ.j2",
+          ".typ.jinja",
+          ".typ.jinja2"
+        ],
+        "configuration": "./language-configuration.json"
       }
     ],
     "htmlLanguageParticipants": [
@@ -649,6 +662,11 @@
         "language": "jinja-rust",
         "scopeName": "source.rust.jinja",
         "path": "./syntaxes/jinja-rust.tmLanguage.json"
+      },
+      {
+        "language": "jinja-typst",
+        "scopeName": "source.typst.jinja",
+        "path": "./syntaxes/jinja-typst.tmLanguage.json"
       }
     ],
     "commands": [
@@ -848,28 +866,30 @@
       }
     }
   },
-  "devDependencies": {
-    "@eslint/js": "^9.37.0",
-    "@rollup/plugin-commonjs": "^28.0.6",
-    "@rollup/plugin-json": "^6.1.0",
-    "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-typescript": "^12.1.4",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "^24.5.2",
-    "@types/vscode": "1.75.0",
-    "@vscode/test-electron": "^2.5.2",
-    "@vscode/vsce": "^3.6.2",
-    "eslint": "^9.37.0",
-    "expect": "^30.2.0",
-    "glob": "^11.0.3",
-    "globals": "^16.4.0",
-    "jiti": "^2.6.1",
-    "mocha": "^11.7.4",
-    "prettier": "^3.6.2",
-    "rollup": "^4.52.3",
-    "tslib": "^2.8.1",
-    "typescript": "^5.9.2",
-    "typescript-eslint": "^8.45.0",
-    "vitest": "^3.2.4"
+  "description": "Feature-rich language server for Jinja.",
+  "displayName": "Jinja Language Server",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "icon": "images/icon-1024.png",
+  "license": "MIT",
+  "private": "true",
+  "publisher": "noamzaks",
+  "scripts": {
+    "compile": "rollup -c",
+    "watch": "rollup -c -w",
+    "package": "npm run compile && vsce package --no-dependencies",
+    "test-e2e": "npm run compile && node dist/tests/run.js",
+    "test-language": "vitest run --root packages/language",
+    "lint": "npm run eslint packages"
+  },
+  "sponsor": {
+    "url": "https://github.com/sponsors/noamzaks"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "dependencies": {
+    "@apidevtools/json-schema-ref-parser": "^15.1.3"
   }
 }
