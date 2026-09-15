@@ -33,6 +33,7 @@ export const configuration: {
   extraTests?: Record<string, TypeInfo>
   extraFilters?: Record<string, TypeInfo>
   extraFileExtensions?: string[]
+  templateRoots?: string[] | undefined
   initialized: boolean
 } = { initialized: false }
 

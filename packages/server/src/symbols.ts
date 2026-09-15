@@ -308,11 +308,30 @@ export const argToPython = (arg: ast.Statement) => {
   }
 }
 
+/**
+ * Resolves template root URIs from configuration.
+ * 
+ * If those are not provided it uses workspace root URIs
+ * as the root URIs.
+ * @returns list of URIs
+ */
+export const getTemplateRootURIs = (): URI[] => {
+  if (!configuration.templateRoots?.length) {
+    return rootURIs
+  }
+
+  return rootURIs.flatMap((rootURI) => 
+    configuration.templateRoots!.map((templateRoot) => 
+      Utils.joinPath(rootURI, templateRoot)
+    )
+  )
+}
+
 export const getURIs = (currentUri: string) => [
   Utils.joinPath(URI.parse(currentUri), ".."),
   ...(configuration?.importURIs?.map((v) => URI.parse(v)) ?? []),
   ...(configuration?.importPaths?.map((v) => URI.file(v)) ?? []),
-  ...rootURIs,
+  ...getTemplateRootURIs(),
 ]
 
 export const findImport = async (
