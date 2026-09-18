@@ -310,7 +310,7 @@ export const argToPython = (arg: ast.Statement) => {
 
 /**
  * Resolves template root URIs from configuration.
- * 
+ *
  * If those are not provided it uses workspace root URIs
  * as the root URIs.
  * @returns list of URIs
@@ -320,10 +320,10 @@ export const getTemplateRootURIs = (): URI[] => {
     return rootURIs
   }
 
-  return rootURIs.flatMap((rootURI) => 
-    configuration.templateRoots!.map((templateRoot) => 
-      Utils.joinPath(rootURI, templateRoot)
-    )
+  return rootURIs.flatMap((rootURI) =>
+    configuration.templateRoots!.map((templateRoot) =>
+      Utils.joinPath(rootURI, templateRoot),
+    ),
   )
 }
 

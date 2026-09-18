@@ -132,9 +132,7 @@ template root instead:
 
 ```json
 {
-  "jinjaLS.templateRoots": [
-    "src/myapp/templates"
-  ]
+  "jinjaLS.templateRoots": ["src/myapp/templates"]
 }
 ```
 
@@ -155,10 +153,7 @@ Multiple template roots can be specified:
 
 ```json
 {
-  "jinjaLS.templateRoots": [
-    "src/myapp/templates",
-    "src/myapp/partials"
-  ]
+  "jinjaLS.templateRoots": ["src/myapp/templates", "src/myapp/partials"]
 }
 ```
 
