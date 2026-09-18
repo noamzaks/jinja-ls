@@ -862,6 +862,15 @@
               "name"
             ]
           }
+        },
+        "jinjaLS.templateRoots": {
+          "title": "Template Roots",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Workspace-relative directories used as Jinja template roots."
         }
       }
     }
@@ -881,6 +890,7 @@
     "package": "npm run compile && vsce package --no-dependencies",
     "test-e2e": "npm run compile && node dist/tests/run.js",
     "test-language": "vitest run --root packages/language",
+    "test-server": "vitest run --root packages/server",
     "lint": "npm run eslint packages"
   },
   "sponsor": {

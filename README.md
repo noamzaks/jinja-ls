@@ -117,6 +117,58 @@ vscode.commands.executeCommand(
 
 You may also specify a URI string for the globals with the second argument so the globals are only defined for that document.
 
+### Template Roots
+
+By default, Jinja LS uses the workspace directories as the roots for
+template resolution and completion.
+
+> [!NOTE]
+> `jinjaLS.templateRoots` is fully compatible with `jinjaLS.importPaths`. However the template roots
+> approach is closer to how Jinja is typically configured.
+
+If your Jinja templates are located in a subdirectory of the workspace,
+you can configure `jinjaLS.templateRoots` to use that directory as the
+template root instead:
+
+```json
+{
+  "jinjaLS.templateRoots": [
+    "src/myapp/templates"
+  ]
+}
+```
+
+Template roots are resolved relative to the workspace directory. With
+the configuration above, a template located at:
+
+```text
+src/myapp/templates/layout/base.html
+```
+
+can be referenced as:
+
+```jinja
+{% extends "layout/base.html" %}
+```
+
+Multiple template roots can be specified:
+
+```json
+{
+  "jinjaLS.templateRoots": [
+    "src/myapp/templates",
+    "src/myapp/partials"
+  ]
+}
+```
+
+When `templateRoots` is configured, the specified directories are used
+as the template roots **instead of the workspace directories**. They are
+not added to the default workspace roots.
+
+If `templateRoots` is omitted or empty, Jinja LS falls back to using the
+workspace directories as template roots.
+
 ## Acknowledgements
 
 - The [language](./packages/language/) package is based on [@huggingface/jinja](https://github.com/huggingface/huggingface.js/tree/main/packages/jinja), licensed under MIT by Hugging Face.
