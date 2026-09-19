@@ -271,7 +271,7 @@ export const collectSymbols = (
         assignment.assignee,
       )
     }
-  } else if (statement instanceof ast.CallStatement) {
+  } else if (statement instanceof ast.CallStatement && statement.callerArgs) {
     const documentation = statement.getDocumentation()
     const parameterTypes = getParametersFromDocumentation(documentation)
     for (let i = 0; i < statement.callerArgs.length; i++) {
