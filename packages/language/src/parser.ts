@@ -46,6 +46,15 @@ import {
 import type { TokenType } from "./lexer"
 import { Token, TOKEN_TYPES } from "./lexer"
 
+const TEST_ARGUMENT_STOP_KEYWORDS = new Set([
+  "and",
+  "or",
+  "if",
+  "else",
+  "in",
+  "is",
+])
+
 /**
  * Generate the Abstract Syntax Tree (AST) from a list of tokens.
  * Operator precedence can be found here: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_precedence#table
@@ -1134,12 +1143,19 @@ export function parse(
         test = parseCallExpression(test)
       }
 
-      const beforeArgument = current
-      const argument = parsePrimaryExpression(true)
-      if (!(argument instanceof MissingNode)) {
-        test = new CallExpression(test, [argument])
-      } else {
-        current = beforeArgument
+      // A bare argument (`x is divisibleby 3`) can't be an operator keyword, e.g. `x is defined and y`.
+      const nextToken = tokens[current]
+      if (
+        nextToken?.type !== TOKEN_TYPES.Identifier ||
+        !TEST_ARGUMENT_STOP_KEYWORDS.has(nextToken.value)
+      ) {
+        const beforeArgument = current
+        const argument = parsePrimaryExpression(true)
+        if (!(argument instanceof MissingNode)) {
+          test = new CallExpression(test, [argument])
+        } else {
+          current = beforeArgument
+        }
       }
 
       operand = new TestExpression(
