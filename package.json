@@ -16,7 +16,7 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "^24.5.2",
     "@types/vscode": "1.75.0",
-    "@vscode/test-electron": "^2.5.2",
+    "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^3.6.2",
     "eslint": "^9.37.0",
     "expect": "^30.2.0",

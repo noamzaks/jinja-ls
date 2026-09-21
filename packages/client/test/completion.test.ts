@@ -71,23 +71,23 @@ suite("Should provide completions", () => {
     ).toMatchObject([
       {
         label: "arguments",
-        kind: "Property",
+        kind: "Field",
       },
       {
         label: "caller",
-        kind: "Property",
+        kind: "Field",
       },
       {
         label: "catch_kwargs",
-        kind: "Property",
+        kind: "Field",
       },
       {
         label: "catch_varargs",
-        kind: "Property",
+        kind: "Field",
       },
       {
         label: "name",
-        kind: "Property",
+        kind: "Field",
       },
     ])
 

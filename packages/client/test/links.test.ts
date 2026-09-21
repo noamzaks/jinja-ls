@@ -8,15 +8,13 @@ suite("Should provide document links", () => {
 
   test("Shows document links in errors.jinja", async () => {
     const links = await getLinks(errorsUri)
-    expect(links).toMatchObject([
-      {
-        range: {
-          a: { a: 0, b: 11 },
-          b: { a: 0, b: 22 },
-        },
-        target: libUri,
-      },
-    ])
+    expect(
+      links.map((link) => ({
+        start: [link.range.start.line, link.range.start.character],
+        end: [link.range.end.line, link.range.end.character],
+        target: link.target?.toString(),
+      })),
+    ).toEqual([{ start: [0, 11], end: [0, 22], target: libUri.toString() }])
   })
 })
 
