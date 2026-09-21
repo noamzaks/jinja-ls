@@ -504,6 +504,49 @@
         "configuration": "./language-configuration.json"
       },
       {
+        "id": "jinja-powershell",
+        "aliases": [
+          "Jinja PowerShell",
+          "jinja-powershell",
+          "jinja-ps1",
+          "jinja-pwsh"
+        ],
+        "extensions": [
+          ".ps1.j2",
+          ".ps1.jinja",
+          ".ps1.jinja2",
+          ".psm1.j2",
+          ".psm1.jinja",
+          ".psm1.jinja2",
+          ".psd1.j2",
+          ".psd1.jinja",
+          ".psd1.jinja2",
+          ".pssc.j2",
+          ".pssc.jinja",
+          ".pssc.jinja2",
+          ".psrc.j2",
+          ".psrc.jinja",
+          ".psrc.jinja2"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "jinja-bat",
+        "aliases": [
+          "Jinja Batch",
+          "jinja-bat"
+        ],
+        "extensions": [
+          ".bat.j2",
+          ".bat.jinja",
+          ".bat.jinja2",
+          ".cmd.j2",
+          ".cmd.jinja",
+          ".cmd.jinja2"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
         "id": "jinja-typst",
         "aliases": [
           "Jinja Typst"
@@ -667,6 +710,16 @@
         "language": "jinja-typst",
         "scopeName": "source.typst.jinja",
         "path": "./syntaxes/jinja-typst.tmLanguage.json"
+      },
+      {
+        "language": "jinja-powershell",
+        "scopeName": "source.powershell.jinja",
+        "path": "./syntaxes/jinja-powershell.tmLanguage.json"
+      },
+      {
+        "language": "jinja-bat",
+        "scopeName": "source.batchfile.jinja",
+        "path": "./syntaxes/jinja-bat.tmLanguage.json"
       }
     ],
     "commands": [

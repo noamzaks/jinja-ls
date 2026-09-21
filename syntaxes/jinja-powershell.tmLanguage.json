@@ -1,0 +1,13 @@
+{
+  "name": "jinja-powershell",
+  "scopeName": "source.powershell.jinja",
+  "comment": "Jinja PowerShell Templates",
+  "patterns": [
+    {
+      "include": "source.jinja"
+    },
+    {
+      "include": "source.powershell"
+    }
+  ]
+}

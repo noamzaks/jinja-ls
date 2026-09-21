@@ -84,6 +84,8 @@ connection.onInitialize((params) => {
           { scheme: "file", language: "jinja-cisco" },
           { scheme: "file", language: "jinja-rust" },
           { scheme: "file", language: "jinja-typst" },
+          { scheme: "file", language: "jinja-powershell" },
+          { scheme: "file", language: "jinja-bat" },
         ],
         full: true,
       },

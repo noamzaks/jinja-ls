@@ -1,0 +1,13 @@
+{
+  "name": "jinja-bat",
+  "scopeName": "source.batchfile.jinja",
+  "comment": "Jinja Batch Templates",
+  "patterns": [
+    {
+      "include": "source.jinja"
+    },
+    {
+      "include": "source.batchfile"
+    }
+  ]
+}

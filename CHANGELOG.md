@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- There is support for PowerShell (`.ps1.j2`, `.psm1.j2`, `.psd1.j2`, `.pssc.j2`, `.psrc.j2`) and Batch (`.bat.j2`, `.cmd.j2`) Jinja templates, also with the `.jinja` and `.jinja2` suffixes.
+
 ## [0.0.15] - 2026-09-20
 
 ### Fixed
